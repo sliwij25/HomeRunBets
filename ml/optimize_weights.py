@@ -1,7 +1,7 @@
 """
 optimize_weights.py
-Train logistic regression on labeled pick_factors data → save ml_weights.json.
-Homer's _score_player() reads these weights automatically once the file exists.
+Train LightGBM on labeled pick_factors data → save ml_weights.json + lgbm_model.txt.
+Homer's _score_player() reads these automatically once the files exist.
 
 Run weekly (or after every ~50 new labeled days accumulate).
 
@@ -11,7 +11,8 @@ Usage:
     python optimize_weights.py --min 50     # require at least N labeled rows (default 100)
 
 Output:
-    ml_weights.json          — loaded by _score_player() at runtime
+    ml_weights.json          — metadata (AUC, feature_order, model_type)
+    lgbm_model.txt           — LightGBM booster (loaded by Homer._ml_score)
     (stdout)                 — feature importances, calibration, rank-vs-hit-rate
 """
 
@@ -28,18 +29,21 @@ import numpy as np
 os.chdir(str(Path(__file__).parent.parent))
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "bets.db")
 WEIGHTS_PATH = os.path.join(os.path.dirname(__file__), "..", "ml_weights.json")
+LGBM_MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "lgbm_model.txt")
 
-# Features used for logistic regression.
+# Features for LightGBM training.
 # Each entry: (column_name, transform)
 # transform: None = use raw value, "platoon" = PLATOON+→1 / platoon-→-1 / else→0
+# All contact-quality features included — LightGBM handles correlated features
+# correctly (no sign-flipping like logistic regression).
 FEATURES = [
-    # Contact quality — top predictors per Savant glossary research
-    ("barrel_rate",      None),    # r=0.70 predictive for HR% — strongest single signal
+    # Contact quality — all restored; LightGBM splits independently without multicollinearity issues
+    ("barrel_rate",      None),    # r=0.70 predictive for HR%
     ("ev_avg",           None),    # r=0.57 predictive — avg exit velocity
-    ("hard_hit_pct",     None),    # proxy for EV 100+ mph in air (r=0.66 descriptive)
+    ("hard_hit_pct",     None),    # r=0.66 descriptive — EV 100+ mph
     ("sweet_spot_pct",   None),    # r=0.42 predictive — 8-32° launch angle%
     ("xiso",             None),    # expected ISO — power composite
-    ("xslg",             None),    # expected slugging — most predictive per FanGraphs
+    ("xslg",             None),    # expected slugging
     ("xhr_rate",         None),    # expected HR rate — populates mid-season
     # Batted ball profile
     ("fb_pct",           None),    # fly ball rate — per RotoGrinders: strong HR correlation
@@ -59,10 +63,16 @@ FEATURES = [
     ("is_home",            None),
     ("platoon",          "platoon"),
     ("h2h_hr",           None),
+    ("career_park_hr",   None),    # career HR count at today's specific venue
+    ("pitcher_career_hr_vs_hand", None),  # career HR/9 vs batter's handedness (explicit ML feature)
     # Pitcher pitch mix
     ("pitcher_fb_pct",       None),
     ("pitcher_breaking_pct", None),
     ("pitcher_offspeed_pct", None),
+    # Batter split vs pitcher's dominant pitch type
+    ("batter_xslg_vs_fastball",  None),
+    ("batter_xslg_vs_breaking",  None),
+    ("batter_xslg_vs_offspeed",  None),
 ]
 
 FEATURE_NAMES = [name for name, _ in FEATURES]
@@ -201,66 +211,73 @@ def confidence_calibration(raw_rows: list[dict]) -> None:
 def train_and_save(X: np.ndarray, y: np.ndarray,
                    save: bool = True) -> dict:
     """
-    Train logistic regression, output coefficients.
-    Returns weights dict saved to ml_weights.json.
+    Train LightGBM gradient boosted tree, output feature importances.
+    Saves lgbm_model.txt (booster) and ml_weights.json (metadata).
+    Returns weights dict.
     """
     try:
-        from sklearn.linear_model import LogisticRegression
-        from sklearn.preprocessing import StandardScaler
+        import lightgbm as lgb
+        import pandas as pd
         from sklearn.model_selection import cross_val_score, StratifiedKFold
-        from sklearn.calibration import CalibratedClassifierCV
     except ImportError:
-        print("\n  scikit-learn not installed.")
-        print("  Run: pip install scikit-learn scipy")
+        print("\n  lightgbm not installed. Run: pip install lightgbm")
         return {}
 
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    # Wrap in DataFrame so LightGBM tracks feature names (suppresses sklearn warning)
+    X_df = pd.DataFrame(X, columns=FEATURE_NAMES)
 
-    # Use calibrated logistic regression (outputs true probabilities)
-    base_lr = LogisticRegression(C=0.5, max_iter=1000, class_weight="balanced")
+    scale_pos_weight = (len(y) - y.sum()) / max(y.sum(), 1)
 
-    # Cross-val AUC to estimate model quality
+    lgbm_params = {
+        "objective":        "binary",
+        "metric":           "auc",
+        "n_estimators":     500,
+        "learning_rate":    0.05,
+        "num_leaves":       31,
+        "min_child_samples": 50,   # prevents overfitting on rare HR events
+        "scale_pos_weight": scale_pos_weight,
+        "random_state":     42,
+        "verbose":          -1,
+    }
+
+    model = lgb.LGBMClassifier(**lgbm_params)
+
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    auc_scores = cross_val_score(base_lr, X_scaled, y, cv=cv, scoring="roc_auc")
+    auc_scores = cross_val_score(model, X_df, y, cv=cv, scoring="roc_auc")
     print(f"\n  Cross-val AUC: {auc_scores.mean():.3f} ± {auc_scores.std():.3f}")
     print("  (0.5 = random, 0.6+ = useful, 0.7+ = strong)")
 
-    # Fit on all data for final weights
-    base_lr.fit(X_scaled, y)
+    model.fit(X_df, y)
 
-    # Feature importances (standardized coefficients)
-    coeffs = base_lr.coef_[0]
-    feat_importance = sorted(
-        zip(FEATURE_NAMES, coeffs), key=lambda x: abs(x[1]), reverse=True
+    importances = sorted(
+        zip(FEATURE_NAMES, model.feature_importances_),
+        key=lambda x: x[1], reverse=True
     )
 
-    print("\n  Feature importances (logistic regression coefficients):")
-    print(f"  {'Feature':<22} {'Coeff':>8}  Direction")
-    print("  " + "-" * 48)
-    for feat, coeff in feat_importance:
-        direction = "↑ helps HR" if coeff > 0 else "↓ hurts HR"
-        bar = "█" * int(abs(coeff) * 3)
-        print(f"  {feat:<22} {coeff:>+8.3f}  {direction}  {bar}")
+    print("\n  Feature importances (LightGBM gain — split count):")
+    print(f"  {'Feature':<22} {'Importance':>10}")
+    print("  " + "-" * 36)
+    for feat, imp in importances:
+        bar = "█" * int(imp / max(v for _, v in importances) * 20)
+        print(f"  {feat:<22} {imp:>10}  {bar}")
 
-    # Build weights dict
     weights = {
+        "model_type":    "lightgbm",
         "trained_on":    date.today().isoformat(),
         "n_samples":     int(len(y)),
         "n_positives":   int(y.sum()),
         "cv_auc_mean":   float(auc_scores.mean()),
         "cv_auc_std":    float(auc_scores.std()),
-        "scaler_mean":   scaler.mean_.tolist(),
-        "scaler_scale":  scaler.scale_.tolist(),
-        "coefficients":  {f: float(c) for f, c in zip(FEATURE_NAMES, coeffs)},
-        "intercept":     float(base_lr.intercept_[0]),
         "feature_order": FEATURE_NAMES,
+        "algo_version":  "4.0",
     }
 
     if save:
+        model.booster_.save_model(LGBM_MODEL_PATH)
         with open(WEIGHTS_PATH, "w") as f:
             json.dump(weights, f, indent=2)
-        print(f"\n  Weights saved to ml_weights.json")
+        print(f"\n  Model saved to lgbm_model.txt")
+        print(f"  Metadata saved to ml_weights.json")
         print("  Homer will use these weights automatically on next run.")
 
     return weights

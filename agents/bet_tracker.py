@@ -162,6 +162,11 @@ _MIGRATION_COLUMNS = [
     ("pitcher_fb_pct",        "REAL"),
     ("pitcher_breaking_pct",  "REAL"),
     ("pitcher_offspeed_pct",  "REAL"),
+    ("career_park_hr",              "INTEGER"),
+    ("pitcher_career_hr_vs_hand",   "REAL"),
+    ("batter_xslg_vs_fastball",     "REAL"),
+    ("batter_xslg_vs_breaking",     "REAL"),
+    ("batter_xslg_vs_offspeed",     "REAL"),
     ("game_pk",               "TEXT"),  # doubleheader support
     ("is_best_bet",           "INTEGER"),  # 1 = top-7 EV pick, 0 = also watching
 ]
@@ -240,6 +245,11 @@ def save_pick_factors(bet_date: str, player: str, signals: dict,
                 "DELETE FROM pick_factors WHERE bet_date=? AND rank=? AND player!=?",
                 (bet_date, rank, player)
             )
+        if game_pk is None:
+            conn.execute(
+                "DELETE FROM pick_factors WHERE bet_date=? AND player=? AND game_pk IS NULL",
+                (bet_date, player)
+            )
         conn.execute("""
             INSERT INTO pick_factors
               (bet_date, player, algo_version, confidence, score, rank, stars,
@@ -250,8 +260,10 @@ def save_pick_factors(bet_date: str, player: str, signals: dict,
                recent_form_14d, pitcher_hr_per_9, pitcher_hr_vs_hand, pitcher_barrel_pct,
                h2h_hr, h2h_ab, is_home, lineup_confirmed, venue_slugging,
                team, blast_rate, altitude_ft, humidity_pct, pressure_mb, carry_ft, hr_luck,
+               career_park_hr, pitcher_career_hr_vs_hand,
+               batter_xslg_vs_fastball, batter_xslg_vs_breaking, batter_xslg_vs_offspeed,
                game_pk, is_best_bet)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(bet_date, player, game_pk) DO UPDATE SET
               rank=excluded.rank, score=excluded.score, stars=excluded.stars,
               algo_version=excluded.algo_version, confidence=excluded.confidence,
@@ -273,6 +285,11 @@ def save_pick_factors(bet_date: str, player: str, signals: dict,
               blast_rate=excluded.blast_rate, altitude_ft=excluded.altitude_ft,
               humidity_pct=excluded.humidity_pct, pressure_mb=excluded.pressure_mb,
               carry_ft=excluded.carry_ft, hr_luck=excluded.hr_luck,
+              career_park_hr=excluded.career_park_hr,
+              pitcher_career_hr_vs_hand=excluded.pitcher_career_hr_vs_hand,
+              batter_xslg_vs_fastball=excluded.batter_xslg_vs_fastball,
+              batter_xslg_vs_breaking=excluded.batter_xslg_vs_breaking,
+              batter_xslg_vs_offspeed=excluded.batter_xslg_vs_offspeed,
               game_pk=excluded.game_pk, is_best_bet=excluded.is_best_bet
         """, (
             bet_date, player, algo_version,
@@ -314,6 +331,11 @@ def save_pick_factors(bet_date: str, player: str, signals: dict,
             signals.get("pressure_mb"),
             signals.get("carry_ft"),
             signals.get("hr_luck"),
+            signals.get("career_park_hr"),
+            signals.get("pitcher_career_hr_vs_hand"),
+            signals.get("batter_xslg_vs_fastball"),
+            signals.get("batter_xslg_vs_breaking"),
+            signals.get("batter_xslg_vs_offspeed"),
             game_pk or signals.get("game_pk"),
             is_best_bet,
         ))

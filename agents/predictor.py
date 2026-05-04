@@ -576,6 +576,7 @@ def fetch_confirmed_lineups(game_date: str = None) -> str:
         games_out.append({
             "game_pk":   game.get("gamePk"),
             "venue":     game.get("venue", {}).get("name"),
+            "venue_id":  game.get("venue", {}).get("id"),
             "game_time": game.get("gameDate"),
             "status":    game.get("status", {}).get("detailedState"),
             "away":      team_info(away_side, lineup_data.get("awayPlayers", []), away_side.get("team", {}).get("id")),
@@ -1638,6 +1639,33 @@ def _fetch_pitcher_career_splits(pitcher_id: int) -> dict:
     return result
 
 
+def _fetch_pitcher_career_splits_batch(pitcher_hand_pairs: list[tuple[int, str]]) -> dict:
+    """
+    Batch-fetch career HR/9 vs batter handedness for multiple pitchers.
+    pitcher_hand_pairs: [(pitcher_id, bat_side), ...] where bat_side in {"L","R","S"}
+    Returns {pitcher_id: hr9_vs_hand_or_None}.
+    """
+    if not pitcher_hand_pairs:
+        return {}
+    results: dict = {}
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futs = {
+            executor.submit(_fetch_pitcher_career_splits, pid): (pid, side)
+            for pid, side in pitcher_hand_pairs
+        }
+        for fut in as_completed(futs):
+            pid, bat_side = futs[fut]
+            try:
+                splits = fut.result()
+                if bat_side in ("L", "S"):
+                    results[pid] = splits.get("vs_lhb_hr9")
+                else:
+                    results[pid] = splits.get("vs_rhb_hr9")
+            except Exception:
+                results[pid] = None
+    return results
+
+
 def _fetch_head_to_head(batter_id: int, pitcher_id: int) -> dict:
     """
     Fetch career batter-vs-pitcher stats from the MLB Stats API.
@@ -1720,6 +1748,122 @@ def _fetch_home_away_splits_batch(player_ids: list) -> dict:
     return result
 
 
+def _fetch_career_park_hrs_batch(player_venue_pairs: list[tuple[int, int]]) -> dict[int, int]:
+    """
+    For each (mlbam_player_id, venue_id) pair, fetch the player's career HR count
+    at that specific venue from Baseball Savant statcast_search.
+    Returns {player_id: career_hr_count}. Skips on HTTP error or empty response.
+    Max 5 concurrent requests to stay within Savant rate limits.
+    """
+    if not player_venue_pairs:
+        return {}
+
+    SAVANT_SEARCH = "https://baseballsavant.mlb.com/statcast_search/csv"
+
+    def _fetch_one(pid: int, venue_id: int) -> tuple[int, int | None]:
+        try:
+            resp = requests.get(
+                SAVANT_SEARCH,
+                params={
+                    "all":              "true",
+                    "player_type":      "batter",
+                    "batters_lookup[]": pid,
+                    "hfAB":             "home_run|",
+                    "hfGT":             "R|",
+                    "stadium":          venue_id,
+                    "type":             "details",
+                    "min_pas":          "0",
+                },
+                timeout=20,
+                headers={"User-Agent": "DingersHotline/1.0"},
+            )
+            resp.raise_for_status()
+            text = resp.text.strip()
+            if not text or text.startswith("Error"):
+                return pid, 0
+            lines = [l for l in text.splitlines() if l.strip()]
+            hr_count = max(0, len(lines) - 1)  # subtract header row
+            return pid, hr_count
+        except Exception:
+            return pid, None
+
+    result: dict[int, int] = {}
+    # Deduplicate — same player can appear multiple times (DH) at same venue
+    unique_pairs = list({(pid, vid) for pid, vid in player_venue_pairs})
+
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = {pool.submit(_fetch_one, pid, vid): pid for pid, vid in unique_pairs}
+        for future in futures:
+            pid, count = future.result()
+            if count is not None:
+                result[pid] = count
+
+    return result
+
+
+def _fetch_batter_pitch_splits(player_ids: list[int]) -> dict[int, dict]:
+    """
+    Fetch batter xSLG vs fastball/breaking_ball/offspeed from Baseball Savant leaderboard.
+    Returns {player_id: {"xslg_fastball": float, "xslg_breaking": float, "xslg_offspeed": float}}.
+    Early-season (before ~June): Savant pitch-type columns may be empty — returns {} per player.
+    """
+    if not player_ids:
+        return {}
+    year = date.today().year
+    try:
+        resp = requests.get(
+            "https://baseballsavant.mlb.com/leaderboard/custom",
+            params={
+                "year":       year,
+                "type":       "batter",
+                "filter":     "",
+                "selections": "xwoba,xslg,xwoba_fastball,xwoba_breaking_ball,xwoba_offspeed_pitch,"
+                              "xslg_fastball,xslg_breaking_ball,xslg_offspeed_pitch",
+                "min_results": 0,
+                "min_pa":     0,
+            },
+            timeout=20,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
+        resp.raise_for_status()
+        rows = resp.json()
+    except Exception:
+        return {}
+
+    if not isinstance(rows, list):
+        return {}
+
+    result: dict[int, dict] = {}
+    player_id_set = {int(p) for p in player_ids}
+    for row in rows:
+        pid_raw = row.get("player_id") or row.get("batter")
+        if pid_raw is None:
+            continue
+        try:
+            pid = int(pid_raw)
+        except (ValueError, TypeError):
+            continue
+        if pid not in player_id_set:
+            continue
+
+        def _sf(val) -> float | None:
+            if val in (None, "", "null"):
+                return None
+            try:
+                return float(val)
+            except (ValueError, TypeError):
+                return None
+
+        splits = {
+            "xslg_fastball":  _sf(row.get("xslg_fastball")),
+            "xslg_breaking":  _sf(row.get("xslg_breaking_ball")),
+            "xslg_offspeed":  _sf(row.get("xslg_offspeed_pitch")),
+        }
+        if any(v is not None for v in splits.values()):
+            result[pid] = splits
+    return result
+
+
 class Homer:
     """
     Gather-then-analyze predictor.
@@ -1732,6 +1876,47 @@ class Homer:
     _gather_data() is cached on the instance so run() + get_picks_json()
     called back-to-back only fetch data once.
     """
+
+    _fetch_career_park_hrs_batch = staticmethod(_fetch_career_park_hrs_batch)
+    _fetch_pitcher_career_splits_batch = staticmethod(_fetch_pitcher_career_splits_batch)
+    _fetch_batter_pitch_splits = staticmethod(_fetch_batter_pitch_splits)
+
+    @staticmethod
+    def _compute_elite_boost_thresholds(batter_stats: dict) -> dict:
+        """
+        Given batter_stats = {player_key: {"home_run": N, "xslg": "0.xxx"}},
+        return {"hr_threshold": int|None, "xslg_threshold": float|None} where
+        each threshold is the 10th-highest value (top-10 players qualify).
+        When fewer than 10 players, the minimum value qualifies everyone.
+        """
+        hr_values: list[int] = []
+        xslg_values: list[float] = []
+        for stats in batter_stats.values():
+            hr = stats.get("home_run")
+            if hr is not None:
+                try:
+                    hr_values.append(int(hr))
+                except (ValueError, TypeError):
+                    pass
+            xslg = stats.get("xslg")
+            if xslg is not None:
+                try:
+                    xslg_values.append(float(xslg))
+                except (ValueError, TypeError):
+                    pass
+
+        hr_threshold = None
+        xslg_threshold = None
+
+        if hr_values:
+            hr_values.sort(reverse=True)
+            hr_threshold = hr_values[9] if len(hr_values) >= 10 else min(hr_values)
+
+        if xslg_values:
+            xslg_values.sort(reverse=True)
+            xslg_threshold = xslg_values[9] if len(xslg_values) >= 10 else min(xslg_values)
+
+        return {"hr_threshold": hr_threshold, "xslg_threshold": xslg_threshold}
 
     def __init__(self):
         self._context: dict | None = None   # cache so data is only fetched once
@@ -2039,6 +2224,13 @@ class Homer:
                                     bat_side == "R" or (bat_side == "S" and sp_throws == "L")
                                 ) else None
                             ),
+                            "pitcher_career_hr_vs_hand": (
+                                pcs.get("vs_lhb_hr9") if (
+                                    bat_side == "L" or (bat_side == "S" and sp_throws == "R")
+                                ) else pcs.get("vs_rhb_hr9") if (
+                                    bat_side == "R" or (bat_side == "S" and sp_throws == "L")
+                                ) else None
+                            ),
                             "pitcher_fb_pct":        sp_fb_pct,
                             "pitcher_breaking_pct":  sp_breaking_pct,
                             "pitcher_offspeed_pct":  sp_offspeed_pct,
@@ -2046,6 +2238,8 @@ class Homer:
                             "h2h_hr":           h2h.get("hr") if h2h else None,
                             "h2h_ab":           h2h.get("ab") if h2h else None,
                             "is_home":          is_home,
+                            "player_id":        batter_id,
+                            "venue_id":         game.get("venue_id"),
                             "venue_slugging":   ha_data.get("slg") if ha_data else None,
                             "bpp_vs_grade":     None,  # BallparkPal matchup grade (0-10)
                             "bpp_proj_rank":    None,  # BallparkPal matchup table rank
@@ -2053,6 +2247,9 @@ class Homer:
                             "park_hr_factor":   None,  # Stadium HR factor (%)
                             "temp_f":           None,  # Temperature in Fahrenheit
                             "wind_mph":         None,  # Wind speed in MPH
+                            "batter_xslg_vs_fastball": None,  # populated in _gather_data()
+                            "batter_xslg_vs_breaking": None,
+                            "batter_xslg_vs_offspeed": None,
                         }
 
         text = "\n".join(lines) if lines else "No player data available."
@@ -2228,6 +2425,47 @@ class Homer:
                                                      pitcher_form=pitcher_form,
                                                      recent_form=recent_form)
         data["player_signals"] = player_signals
+
+        # ── Career park HR batch fetch ────────────────────────────────────────
+        try:
+            pvp = [
+                (int(sig["player_id"]), int(sig["venue_id"]))
+                for sig in player_signals.values()
+                if sig.get("player_id") and sig.get("venue_id")
+            ]
+            if pvp:
+                print(f"  [CareerPark] Fetching career park HR for {len(pvp)} players…")
+                career_park = _fetch_career_park_hrs_batch(pvp)
+                for sig in player_signals.values():
+                    pid = sig.get("player_id")
+                    if pid and int(pid) in career_park:
+                        sig["career_park_hr"] = career_park[int(pid)]
+                hits = sum(1 for v in career_park.values() if v and v > 0)
+                print(f"  [CareerPark] Done — {hits}/{len(career_park)} players have ≥1 career HR at today's venues")
+        except Exception as e:
+            print(f"  [CareerPark] Warning: fetch failed ({e}) — signal skipped")
+
+        # ── Batter pitch-type splits (xSLG vs fastball/breaking/offspeed) ──────
+        try:
+            batter_ids = [
+                int(sig["player_id"])
+                for sig in player_signals.values()
+                if sig.get("player_id") and sig.get("lineup_confirmed")
+            ]
+            if batter_ids:
+                print(f"  [PitchSplits] Fetching batter pitch-type splits for {len(batter_ids)} players…")
+                pitch_splits = _fetch_batter_pitch_splits(batter_ids)
+                for sig in player_signals.values():
+                    pid = sig.get("player_id")
+                    if pid and int(pid) in pitch_splits:
+                        ps = pitch_splits[int(pid)]
+                        sig["batter_xslg_vs_fastball"] = ps.get("xslg_fastball")
+                        sig["batter_xslg_vs_breaking"] = ps.get("xslg_breaking")
+                        sig["batter_xslg_vs_offspeed"] = ps.get("xslg_offspeed")
+                hits = len(pitch_splits)
+                print(f"  [PitchSplits] Done — {hits}/{len(batter_ids)} players have pitch-type split data")
+        except Exception as e:
+            print(f"  [PitchSplits] Warning: fetch failed ({e}) — signal skipped")
 
         # ── Merge odds signals (EV, Kelly, value_edge, Pinnacle) ─────────────
         try:
@@ -2788,43 +3026,50 @@ class Homer:
     # Cached ML weights — loaded once per process from ml_weights.json
     _ml_weights: dict | None = None
     _ml_weights_loaded: bool = False
+    _lgbm_booster = None  # lightgbm.Booster, loaded alongside ml_weights.json
 
     @classmethod
     def _load_ml_weights(cls) -> dict | None:
-        """Load ml_weights.json if it exists (written by optimize_weights.py)."""
+        """Load ml_weights.json (and lgbm_model.txt if model_type=lightgbm)."""
         if cls._ml_weights_loaded:
             return cls._ml_weights
         cls._ml_weights_loaded = True
-        weights_path = os.path.join(os.path.dirname(__file__), "..", "ml_weights.json")
-        weights_path = os.path.normpath(weights_path)
+        base = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+        weights_path = os.path.join(base, "ml_weights.json")
         if os.path.exists(weights_path):
             try:
                 with open(weights_path) as f:
                     cls._ml_weights = json.load(f)
+                model_type = cls._ml_weights.get("model_type", "logistic_regression")
                 print(f"  [ML] Loaded weights from ml_weights.json "
                       f"(trained {cls._ml_weights.get('trained_on','?')}, "
-                      f"AUC={cls._ml_weights.get('cv_auc_mean', 0):.3f})")
-            except Exception:
+                      f"AUC={cls._ml_weights.get('cv_auc_mean', 0):.3f}, "
+                      f"model={model_type})")
+                if model_type == "lightgbm":
+                    lgbm_path = os.path.join(base, "lgbm_model.txt")
+                    if os.path.exists(lgbm_path):
+                        import lightgbm as lgb
+                        cls._lgbm_booster = lgb.Booster(model_file=lgbm_path)
+                    else:
+                        print("  [ML] Warning: lgbm_model.txt not found — ML scoring disabled")
+                        cls._ml_weights = None
+            except Exception as e:
+                print(f"  [ML] Warning: failed to load weights: {e}")
                 cls._ml_weights = None
         return cls._ml_weights
 
     @classmethod
     def _ml_score(cls, sig: dict) -> float | None:
         """
-        Compute logistic regression score from ml_weights.json.
-        Returns a score in the same range as the hand-tuned scorer,
-        or None if weights aren't available yet.
+        Score a player using the trained ML model (LightGBM or logistic regression).
+        Returns a float in the same 0–20 range as the hand-tuned scorer,
+        or None if no model is available yet.
         """
         weights = cls._load_ml_weights()
         if not weights:
             return None
 
         feature_order = weights.get("feature_order", [])
-        coeffs        = weights.get("coefficients", {})
-        intercept     = weights.get("intercept", 0.0)
-        means         = weights.get("scaler_mean", [])
-        scales        = weights.get("scaler_scale", [])
-
         PLATOON_MAP = {"PLATOON+": 1.0, "platoon-": -1.0}
 
         raw_vals = []
@@ -2835,19 +3080,33 @@ class Homer:
                 v = sig.get(feat)
                 raw_vals.append(float(v) if v is not None else float("nan"))
 
-        # Impute missing with 0 (mean after scaling)
+        model_type = weights.get("model_type", "logistic_regression")
+
+        if model_type == "lightgbm":
+            if cls._lgbm_booster is None:
+                return None
+            import numpy as np
+            X = np.array([raw_vals], dtype=float)
+            prob = float(cls._lgbm_booster.predict(X)[0])
+            return round(prob * 20.0, 1)
+
+        # Legacy logistic regression path
+        coeffs  = weights.get("coefficients", {})
+        intercept = weights.get("intercept", 0.0)
+        means   = weights.get("scaler_mean", [])
+        scales  = weights.get("scaler_scale", [])
+
         scaled = []
         for i, v in enumerate(raw_vals):
             if means and scales and i < len(means):
                 mean_i  = means[i]
                 scale_i = scales[i] if scales[i] != 0 else 1.0
-                scaled.append(0.0 if (v != v) else (v - mean_i) / scale_i)  # nan check
+                scaled.append(0.0 if (v != v) else (v - mean_i) / scale_i)
             else:
                 scaled.append(0.0 if (v != v) else v)
 
         log_odds = intercept + sum(scaled[i] * coeffs.get(feat, 0.0)
                                    for i, feat in enumerate(feature_order))
-        # Convert log-odds to probability, then scale to match hand-tuned score range (~0-20)
         import math
         prob = 1.0 / (1.0 + math.exp(-log_odds))
         return round(prob * 20.0, 1)
@@ -2969,6 +3228,22 @@ class Homer:
             elif p_vs_hand >= 1.0:  score += 1
             elif p_vs_hand <= 0.25: score -= 1   # Dominates this handedness historically
 
+        # Career handedness split (explicit signal; mirrors pitcher_hr_vs_hand but tracked separately
+        # as an ML feature for importance attribution).
+        career_hr_vs_hand = sig.get("pitcher_career_hr_vs_hand")
+        if career_hr_vs_hand is not None:
+            if career_hr_vs_hand >= 1.5:    score += 2
+            elif career_hr_vs_hand >= 1.0:  score += 1
+            elif career_hr_vs_hand <= 0.25: score -= 1
+
+        # Career HRs at today's specific venue — venue-specific power indicator.
+        # No penalty for 0: can't distinguish 0-in-0-PA from 0-in-50-PA without PA data.
+        career_park_hr = sig.get("career_park_hr")
+        if career_park_hr is not None:
+            if career_park_hr >= 5:    score += 2
+            elif career_park_hr >= 3:  score += 1
+            elif career_park_hr >= 1:  score += 0.5
+
         # Pitcher pitch mix (directional — fastball favors HR, breaking/offspeed suppresses)
         fb_pct       = sig.get("pitcher_fb_pct")
         breaking_pct = sig.get("pitcher_breaking_pct")
@@ -2984,6 +3259,33 @@ class Homer:
 
         if offspeed_pct is not None:
             if offspeed_pct >= 20: score -= 1
+
+        # Pitch-type Phase 2: batter's xSLG vs pitcher's dominant pitch type.
+        # Only triggers when pitcher has a clear dominant pitch (>=50%), otherwise
+        # the signal is ambiguous and no adjustment is made.
+        _DOMINANT_THRESHOLD = 50.0
+        bxslg_fb   = sig.get("batter_xslg_vs_fastball")
+        bxslg_br   = sig.get("batter_xslg_vs_breaking")
+        bxslg_os   = sig.get("batter_xslg_vs_offspeed")
+        _dominant_pitch = None
+        _dominant_pct   = 0.0
+        for _ptype, _pct in (("fb", fb_pct), ("br", breaking_pct), ("os", offspeed_pct)):
+            if _pct is not None and _pct >= _DOMINANT_THRESHOLD and _pct > _dominant_pct:
+                _dominant_pitch = _ptype
+                _dominant_pct   = _pct
+
+        if _dominant_pitch == "fb" and bxslg_fb is not None:
+            if bxslg_fb >= 0.500:   score += 2
+            elif bxslg_fb >= 0.420: score += 1
+            elif bxslg_fb <= 0.280: score -= 1
+        elif _dominant_pitch == "br" and bxslg_br is not None:
+            if bxslg_br >= 0.500:   score += 2
+            elif bxslg_br >= 0.420: score += 1
+            elif bxslg_br <= 0.280: score -= 1
+        elif _dominant_pitch == "os" and bxslg_os is not None:
+            if bxslg_os >= 0.500:   score += 2
+            elif bxslg_os >= 0.420: score += 1
+            elif bxslg_os <= 0.280: score -= 1
 
         # Statcast rate stats require a minimum sample to be reliable.
         # pa_scale weights their contribution based on sample size:
@@ -3522,20 +3824,30 @@ class Homer:
         """
         _scratched = {s.lower() for s in (scratched or [])}
 
-        # Season HR leaderboard boost: top-10 in season HRs get +2 bonus.
-        # Prevents the model from undervaluing elite proven power hitters on
-        # off-Statcast days (e.g. when weather/park signals are neutral).
-        _hr_leaders: list[tuple[int, str]] = []
-        for _sk, _sg in player_signals.items():
-            _shr = _sg.get("season_hr") or 0
-            if _shr > 0:
-                _hr_leaders.append((_shr, _sk))
-        _hr_leaders.sort(reverse=True)
-        _top10_hr_keys = {k for _, k in _hr_leaders[:10]}
+        # Season leaderboard boost: top-10 in HR or xSLG get +2 bonus.
+        # Prevents undervaluing elite proven power hitters on neutral signal days.
+        _batter_stats = {
+            k: {"home_run": v.get("season_hr") or 0, "xslg": v.get("xslg")}
+            for k, v in player_signals.items()
+        }
+        _thresholds = self._compute_elite_boost_thresholds(_batter_stats)
+        _hr_thr   = _thresholds["hr_threshold"]
+        _xslg_thr = _thresholds["xslg_threshold"]
+
+        def _is_elite(sg: dict) -> bool:
+            if _hr_thr is not None and (sg.get("season_hr") or 0) >= _hr_thr > 0:
+                return True
+            if _xslg_thr is not None:
+                try:
+                    if float(sg.get("xslg") or 0) >= _xslg_thr > 0:
+                        return True
+                except (TypeError, ValueError):
+                    pass
+            return False
 
         scored = []
         for sig_key, sig in player_signals.items():
-            if sig_key in _top10_hr_keys:
+            if _is_elite(sig):
                 sig["_elite_hr_boost"] = 2.0
             player = sig.get("player_name", sig_key.split("|")[0])
             if player.lower() in _scratched:
@@ -3576,6 +3888,10 @@ class Homer:
             h2h_ab = sig.get("h2h_ab")
             if h2h_hr is not None and h2h_hr >= 1:
                 reasons.append(f"h2h {h2h_hr}HR/{h2h_ab}AB")
+            career_pk = sig.get("career_park_hr")
+            if career_pk:
+                venue_short = (sig.get("venue") or "park")[:22]
+                reasons.append(f"career {venue_short}: {career_pk}HR")
             barrel = sig.get("barrel_rate")
             if barrel is not None and barrel >= 10:
                 reasons.append(f"barrel {barrel:.1f}%")
