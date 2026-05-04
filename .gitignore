@@ -29,3 +29,4 @@ __pycache__/
 
 # Hookify rules — local/personal, not shared
 .claude/*.local.md
+.worktrees/
