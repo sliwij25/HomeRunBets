@@ -20,7 +20,7 @@ from difflib import SequenceMatcher
 BASE = Path(__file__).parent.parent
 DB_PATH = BASE / "data" / "bets.db"
 SCRATCHED_FILE = BASE / "cache" / "scratched.json"
-FUZZY_THRESHOLD = 0.82
+FUZZY_THRESHOLD = 0.85
 
 
 def _fuzzy(a: str, b: str) -> bool:
@@ -50,14 +50,20 @@ def detect_and_update_scratches(today: str | None = None) -> list[str]:
         print("[detect_scratches] No picks in DB for today — skipping")
         return []
 
-    top20 = rows[:20]
+    top20 = [(p, t) for p, t in rows[:20] if t]
+    missing = [p for p, t in rows[:20] if not t]
+    if missing:
+        print(f"[detect_scratches] WARNING: {len(missing)} players have no team recorded — skipping: {missing}")
+    if not top20:
+        print("[detect_scratches] No players with team data — skipping scratch check")
+        return []
     print(f"[detect_scratches] Checking {len(top20)} players against confirmed lineups...")
 
     # ── 2. Fetch current MLB lineups ─────────────────────────────────────────────
     try:
         resp = requests.get(
             f"https://statsapi.mlb.com/api/v1/schedule"
-            f"?sportId=1&date={today}&hydrate=lineups(person),team",
+            f"?sportId=1&date={today}&hydrate=lineups(person),probablePitcher,team,venue",
             timeout=15,
         )
         resp.raise_for_status()

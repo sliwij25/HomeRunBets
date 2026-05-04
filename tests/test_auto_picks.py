@@ -164,7 +164,7 @@ def test_detect_scratches_player_absent_from_confirmed_lineup(tmp_path):
 
     with patch("scripts.detect_scratches.DB_PATH", db), \
          patch("scripts.detect_scratches.SCRATCHED_FILE", scratched_file), \
-         patch("requests.get", return_value=lineup_resp):
+         patch("scripts.detect_scratches.requests.get", return_value=lineup_resp):
         result = ds.detect_and_update_scratches()
 
     assert result == ["Aaron Judge"]
@@ -187,7 +187,7 @@ def test_detect_scratches_player_in_confirmed_lineup(tmp_path):
 
     with patch("scripts.detect_scratches.DB_PATH", db), \
          patch("scripts.detect_scratches.SCRATCHED_FILE", scratched_file), \
-         patch("requests.get", return_value=lineup_resp):
+         patch("scripts.detect_scratches.requests.get", return_value=lineup_resp):
         result = ds.detect_and_update_scratches()
 
     assert result == []
@@ -208,7 +208,7 @@ def test_detect_scratches_unconfirmed_lineup_skips(tmp_path):
 
     with patch("scripts.detect_scratches.DB_PATH", db), \
          patch("scripts.detect_scratches.SCRATCHED_FILE", scratched_file), \
-         patch("requests.get", return_value=lineup_resp):
+         patch("scripts.detect_scratches.requests.get", return_value=lineup_resp):
         result = ds.detect_and_update_scratches()
 
     assert result == []
@@ -229,7 +229,7 @@ def test_detect_scratches_fuzzy_name_match(tmp_path):
 
     with patch("scripts.detect_scratches.DB_PATH", db), \
          patch("scripts.detect_scratches.SCRATCHED_FILE", scratched_file), \
-         patch("requests.get", return_value=lineup_resp):
+         patch("scripts.detect_scratches.requests.get", return_value=lineup_resp):
         result = ds.detect_and_update_scratches()
 
     assert result == []  # should NOT be scratched — fuzzy match found him
@@ -245,7 +245,7 @@ def test_detect_scratches_no_picks_in_db(tmp_path):
 
     with patch("scripts.detect_scratches.DB_PATH", db), \
          patch("scripts.detect_scratches.SCRATCHED_FILE", scratched_file), \
-         patch("requests.get") as mock_get:
+         patch("scripts.detect_scratches.requests.get") as mock_get:
         result = ds.detect_and_update_scratches()
 
     assert result == []
@@ -262,7 +262,7 @@ def test_detect_scratches_mlb_api_error(tmp_path):
 
     with patch("scripts.detect_scratches.DB_PATH", db), \
          patch("scripts.detect_scratches.SCRATCHED_FILE", scratched_file), \
-         patch("requests.get", side_effect=Exception("timeout")):
+         patch("scripts.detect_scratches.requests.get", side_effect=Exception("timeout")):
         result = ds.detect_and_update_scratches()
 
     assert result == []

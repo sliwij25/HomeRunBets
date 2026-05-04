@@ -25,8 +25,11 @@ def schedule_wake() -> None:
     local_wake = wake_time.astimezone(ZoneInfo("America/Chicago"))
     pmset_fmt = local_wake.strftime("%m/%d/%y %H:%M:%S")
 
-    subprocess.run(["pmset", "schedule", "wake", pmset_fmt], check=False)
-    print(f"[schedule_wake] Wake scheduled for {pmset_fmt} CT ({wake_offset}min from now)")
+    result = subprocess.run(["pmset", "schedule", "wake", pmset_fmt], check=False, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"[schedule_wake] ERROR: pmset failed (rc={result.returncode}): {result.stderr.strip()}")
+    else:
+        print(f"[schedule_wake] Wake scheduled for {pmset_fmt} CT ({wake_offset}min from now)")
 
 
 if __name__ == "__main__":
