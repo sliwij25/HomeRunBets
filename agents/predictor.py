@@ -3168,12 +3168,11 @@ class Homer:
         if platoon == "PLATOON+":   score += 2
         elif platoon == "platoon-": score -= 1
 
-        # Recent HR form (last 14 days)
+        # Recent HR form (last 14 days) — ML gives this 0% importance (noise vs season metrics).
+        # Kept as a max +1 tie-breaker only; not a primary ranking driver.
         form = sig.get("recent_form_14d")
         if form is not None:
-            if form >= 3:   score += 3
-            elif form >= 2: score += 2
-            elif form >= 1: score += 1
+            if form >= 2: score += 1
 
         # Pitcher recent vulnerability (last 3 starts HR/9), scaled by batter power AND park.
         # Two gates:
@@ -3715,8 +3714,10 @@ class Homer:
         if ml is not None:
             weights = Homer._load_ml_weights()
             auc = weights.get("cv_auc_mean", 0.5) if weights else 0.5
-            # ml_weight: 0 at AUC=0.5, 0.5 at AUC=0.7, capped at 0.7
-            ml_weight = min(0.7, max(0.0, (auc - 0.5) * 2.5))
+            # ml_weight: 0 at AUC=0.5, ~56% at AUC=0.64, capped at 0.8
+            # Multiplier raised from 2.5→4.0: feature importance shows ML correctly
+            # prioritizes xISO/barrel/hard-hit over recency signals the heuristic over-weighted.
+            ml_weight = min(0.8, max(0.0, (auc - 0.5) * 4.0))
             score = (1.0 - ml_weight) * score + ml_weight * ml
 
         return round(score, 1)
@@ -3867,20 +3868,21 @@ class Homer:
             elif sc >= 5:  confidence = "MEDIUM"
             else:          confidence = "LOW"
 
-            # Build a one-line reasoning string from real signals
+            # Build a one-line reasoning string — ordered by ML feature importance.
+            # Top 3 ML features: xISO (52.6%), hard_hit_pct (20.8%), barrel_rate (18.7%)
             reasons = []
             xiso_val = sig.get("xiso")
             if xiso_val is not None and xiso_val >= 0.200:
                 reasons.append(f"xISO {xiso_val:.3f}")
-            bpp_rank = sig.get("bpp_proj_rank")
-            if bpp_rank is not None and bpp_rank <= 15:
-                reasons.append(f"BPP rank #{bpp_rank}")
+            barrel = sig.get("barrel_rate")
+            if barrel is not None and barrel >= 10:
+                reasons.append(f"barrel {barrel:.1f}%")
+            hh_pct = sig.get("hard_hit_pct")
+            if hh_pct is not None and hh_pct >= 45:
+                reasons.append(f"hard hit {hh_pct:.1f}%")
             ve = sig.get("value_edge")
             if ve is not None and ve >= 3:
                 reasons.append(f"VALUE +{ve:.1f}pp")
-            form = sig.get("recent_form_14d")
-            if form is not None and form >= 2:
-                reasons.append(f"{form}HR last 14d")
             p_hr9 = sig.get("pitcher_hr_per_9")
             if p_hr9 is not None and p_hr9 >= 1.0:
                 reasons.append(f"pitcher L3: {p_hr9:.1f}HR/9")
@@ -3892,9 +3894,12 @@ class Homer:
             if career_pk:
                 venue_short = (sig.get("venue") or "park")[:22]
                 reasons.append(f"career {venue_short}: {career_pk}HR")
-            barrel = sig.get("barrel_rate")
-            if barrel is not None and barrel >= 10:
-                reasons.append(f"barrel {barrel:.1f}%")
+            bpp_rank = sig.get("bpp_proj_rank")
+            if bpp_rank is not None and bpp_rank <= 15:
+                reasons.append(f"BPP rank #{bpp_rank}")
+            form = sig.get("recent_form_14d")
+            if form is not None and form >= 3:
+                reasons.append(f"{form}HR last 14d")
             bpp_hr_pct = sig.get("bpp_hr_pct")
             if bpp_hr_pct is not None and bpp_hr_pct >= 16:
                 reasons.append(f"BPP {bpp_hr_pct:.1f}%")
