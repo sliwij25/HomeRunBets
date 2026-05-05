@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.homerunbets.daily</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/joesliwinski/AIProjects/DingersHotline/scripts/auto_picks.sh</string>
+    </array>
+
+    <!-- Run every 30 minutes — auto_picks.sh decides whether to run picks or schedule a wake -->
+    <key>StartInterval</key>
+    <integer>1800</integer>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/joesliwinski/AIProjects/DingersHotline</string>
+
+    <!-- Append each run to a single combined daemon log -->
+    <key>StandardOutPath</key>
+    <string>/Users/joesliwinski/AIProjects/DingersHotline/logs/auto_picks_daemon.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/joesliwinski/AIProjects/DingersHotline/logs/auto_picks_daemon.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/joesliwinski/AIProjects/DingersHotline/.venv/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>/Users/joesliwinski</string>
+    </dict>
+
+    <!-- Do NOT run immediately when loaded — only on schedule -->
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
