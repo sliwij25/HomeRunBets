@@ -233,7 +233,7 @@ if args.use_cache:
                 else:
                     print(f"  [Lock] Warning: '{_name}' not found in cache signals — skipped.")
 
-            # Backfill: if scratches dropped us below 20, pull in next-best players
+            # Backfill: if scratches dropped us below 15, pull in next-best players
             _needed = 15 - len(_locked_sig)
             if _needed > 0:
                 _locked_names_lower = {k.split("|")[0].lower() for k in _locked_sig}
@@ -512,7 +512,7 @@ if not args.brief and sys.stdin.isatty():
                 FROM pick_factors
                 WHERE bet_date = ? AND best_odds IS NULL AND rank IS NOT NULL
                   AND algo_version NOT LIKE 'hist_%'
-            ) WHERE rn <= 20
+            ) WHERE rn <= 15
             ORDER BY rank
         """, (TODAY,)).fetchall()
         if _missing:
