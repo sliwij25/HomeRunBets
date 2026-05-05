@@ -1,10 +1,10 @@
 {
   "model_type": "lightgbm",
-  "trained_on": "2026-04-30",
-  "n_samples": 190396,
-  "n_positives": 15414,
-  "cv_auc_mean": 0.6398831717109658,
-  "cv_auc_std": 0.0037882066614065677,
+  "trained_on": "2026-05-05",
+  "n_samples": 194056,
+  "n_positives": 15722,
+  "cv_auc_mean": 0.6388634788277956,
+  "cv_auc_std": 0.0038594035576397707,
   "feature_order": [
     "barrel_rate",
     "ev_avg",
@@ -29,9 +29,13 @@
     "platoon",
     "h2h_hr",
     "career_park_hr",
+    "pitcher_career_hr_vs_hand",
     "pitcher_fb_pct",
     "pitcher_breaking_pct",
-    "pitcher_offspeed_pct"
+    "pitcher_offspeed_pct",
+    "batter_xslg_vs_fastball",
+    "batter_xslg_vs_breaking",
+    "batter_xslg_vs_offspeed"
   ],
-  "algo_version": "4.0"
+  "algo_version": "4.1"
 }
