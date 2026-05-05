@@ -54,7 +54,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--use-cache", action="store_true",
                     help="Load cached context instead of fetching fresh data")
 parser.add_argument("--no-lock", action="store_true",
-                    help="Bypass the morning top-20 player lock; use with --use-cache after scoring changes")
+                    help="Bypass the morning top-15 player lock; use with --use-cache after scoring changes")
 parser.add_argument("--brief", action="store_true",
                     help="Print only top 7 picks + summary; full list still saved to .txt and HTML")
 parser.add_argument("--no-notify", action="store_true",
@@ -77,7 +77,7 @@ from generate_html import generate_picks_html, generate_leaderboard_html, genera
 # ── Auto-maintenance (runs every morning before picks) ─────────────────────────
 # Labels yesterday's pick_factors with actual HR results and refreshes 2026 training data.
 # ML retraining happens in record_results.py (night run) — NOT here — so weights
-# are stable for the entire day and the morning top-20 is never blown up by a retrain.
+# are stable for the entire day and the morning top-15 is never blown up by a retrain.
 
 def _auto_maintain():
     import sqlite3 as _sqlite3
@@ -204,7 +204,7 @@ if args.use_cache:
         Homer._ml_weights_loaded = True
         print(f"  [Lock] Using morning ML weights (AUC={_snap.get('cv_auc_mean',0):.3f}) — scores will not drift.")
 
-    # Lock the top-20 player set from today's existing picks file.
+    # Lock the top-15 player set from today's existing picks file.
     # Cache re-runs may only REMOVE scratched players — they cannot add new players
     # or drop existing ones due to ML weight changes or lineup confirmation shifts.
     # Pass --no-lock to bypass this when you've intentionally changed scoring logic.
@@ -219,7 +219,7 @@ if args.use_cache:
                 _pname = _re.sub(r"\s*\[[^\]]+\]\s*", " ", _m.group(1)).strip()
                 _locked.append(_pname)
         if _locked:
-            print(f"  [Lock] Preserving today's top-20 player set ({len(_locked)} players locked).")
+            print(f"  [Lock] Preserving today's top-15 player set ({len(_locked)} players locked).")
             _all_sig = homer._context.get("player_signals", {})
             _locked_sig = {}
             for _name in _locked:
@@ -234,7 +234,7 @@ if args.use_cache:
                     print(f"  [Lock] Warning: '{_name}' not found in cache signals — skipped.")
 
             # Backfill: if scratches dropped us below 20, pull in next-best players
-            _needed = 20 - len(_locked_sig)
+            _needed = 15 - len(_locked_sig)
             if _needed > 0:
                 _locked_names_lower = {k.split("|")[0].lower() for k in _locked_sig}
                 _scratch_lower = {s.lower() for s in SCRATCHED}
@@ -261,7 +261,7 @@ else:
     homer = Homer()
 
 narrative = homer.run(
-    f"Today is {TODAY}. Give me the top 20 HR picks for today with confidence tiers. "
+    f"Today is {TODAY}. Give me the top 15 HR picks for today with confidence tiers. "
     "Evaluate ALL batters in the confirmed lineups using BallparkPal matchup grades, "
     "park factors, Statcast barrel rate, hard hit %, recent HR form, and our historical record. "
     "For each pick include: player, matchup, batting position, key stats, and reasoning.",
@@ -269,7 +269,7 @@ narrative = homer.run(
 )
 
 # ── Compute Best Bets (top-7 by EV) ──────────────────────────────────────────
-# Rank top-20 model picks by expected value. Three tiers:
+# Rank top-15 model picks by expected value. Three tiers:
 #   Tier 0: ev_10 ≥ $0.50 AND Pinnacle odds present → meaningful Pinnacle-anchored EV
 #   Tier 1: ev_10 ≥ $0.50 but no Pinnacle (consensus) → meaningful estimated EV (~)
 #   Tier 2: ev_10 < $0.50 or no odds → model score proxy
@@ -286,7 +286,7 @@ def _ev_sort_key(p: dict) -> tuple:
     return (2, -(p.get("score") or 0))
 
 _sigs_for_bb = homer._context.get("player_signals", {})
-_ranked_for_bb = homer._rank_picks_python(_sigs_for_bb, top_n=20, verbose=False, scratched=SCRATCHED)
+_ranked_for_bb = homer._rank_picks_python(_sigs_for_bb, top_n=15, verbose=False, scratched=SCRATCHED)
 _best_bets: list[dict] = sorted(_ranked_for_bb, key=_ev_sort_key)[:5]
 
 def _fmt_best_bets_terminal(best_bets: list[dict]) -> str:
@@ -397,7 +397,7 @@ print("\n" + "=" * 60)
 print("  BET SLIPS — fill in odds + potential_payout from your platform")
 print("=" * 60)
 
-picks = homer.get_picks_json(top_n=20, scratched=SCRATCHED)
+picks = homer.get_picks_json(top_n=15, scratched=SCRATCHED)
 _all_ranked: list[dict] = []  # filled below; used for HTML generation
 
 # Re-run if a notification was already sent today (survives failed first runs)
@@ -418,7 +418,7 @@ else:
     # Save ALL ranked players (not just top 8) for unbiased ML training data.
     # The model needs to see who didn't homer just as much as who did.
     player_signals = homer._context.get("player_signals", {})
-    all_ranked = homer._rank_picks_python(player_signals, top_n=20, verbose=not args.brief, scratched=SCRATCHED)
+    all_ranked = homer._rank_picks_python(player_signals, top_n=15, verbose=not args.brief, scratched=SCRATCHED)
     _all_ranked = all_ranked
     _best_bet_names = {p.get("player") for p in _best_bets}
     saved = 0
@@ -436,7 +436,7 @@ else:
                 saved += 1
             except Exception:
                 pass
-    print(f"\n  [ML Training] Saved signal snapshots for {saved} players (top 20 ranked)")
+    print(f"\n  [ML Training] Saved signal snapshots for {saved} players (top 15 ranked)")
 
 
 # ── Odds comparison / value finder ────────────────────────────────────────────
@@ -499,7 +499,7 @@ except Exception as e:
     print(f"  Odds comparison unavailable: {e}")
 
 
-# ── Prompt for missing best_odds on today's top-20 ────────────────────────────
+# ── Prompt for missing best_odds on today's top-15 ────────────────────────────
 
 if not args.brief and sys.stdin.isatty():
     try:
@@ -516,7 +516,7 @@ if not args.brief and sys.stdin.isatty():
             ORDER BY rank
         """, (TODAY,)).fetchall()
         if _missing:
-            print(f"\n  {len(_missing)} top-20 pick(s) missing odds — enter now or press Enter to skip:")
+            print(f"\n  {len(_missing)} top-15 pick(s) missing odds — enter now or press Enter to skip:")
             for _mp, _mr in _missing:
                 _inp = input(f"    #{_mr} {_mp} best odds (e.g. +350): ").strip()
                 if _inp:
@@ -571,7 +571,7 @@ try:
                   f"({summary['win_pct']} hit rate, {summary['days_tracked']}d)")
         else:
             print("\n" + "=" * 60)
-            print("  MODEL P&L  (fictitious — $10 on every top-20 pick)")
+            print("  MODEL P&L  (fictitious — $10 on every top-15 pick)")
             print("=" * 60)
             print(f"  Days tracked:   {summary['days_tracked']}")
             print(f"  Total picks:    {summary['total_picks_with_odds']}  ({summary['win_pct']} hit rate)")
