@@ -3,7 +3,7 @@ Bet Tracker Agent
 
 Skills:
   - save_pick_factors         : store signal snapshot for a pick (algorithm tracking)
-  - model_pnl_report          : hypothetical P&L if $10 was bet on every top-20 pick
+  - model_pnl_report          : hypothetical P&L if $10 was bet on every top-15 pick
   - model_performance_report  : hit rates, ROI, and rank-bucket breakdown
   - score_bucket_hit_rate     : HR hit rate for a score range
   - score_bucket_pnl          : hypothetical P&L for a score range
@@ -408,7 +408,7 @@ def backfill_pick_odds(bet_date: str, comparisons: list) -> int:
 
 def model_pnl_report() -> str:
     """
-    Hypothetical P&L if $10 was bet on every top-20 pick each day.
+    Hypothetical P&L if $10 was bet on every top-15 pick each day.
     Losses count as -$10 regardless of whether odds were captured.
     Wins only count when best_odds is known (user can supply missing ones manually).
     """
@@ -427,7 +427,7 @@ def model_pnl_report() -> str:
                   AND rank IS NOT NULL
                   AND algo_version NOT LIKE 'hist_%'
             )
-            WHERE rn <= 20
+            WHERE rn <= 15
             ORDER BY bet_date, rank
         """).fetchall()
     finally:
@@ -494,7 +494,7 @@ def model_pnl_report() -> str:
 
 def yesterday_results_snapshot(yesterday: str) -> dict:
     """
-    Return the top-20 picks from yesterday with homered labels.
+    Return the top-15 picks from yesterday with homered labels.
     Used at the start of each daily run to display previous-day results.
 
     Returns a dict with keys:
@@ -519,7 +519,7 @@ def yesterday_results_snapshot(yesterday: str) -> dict:
                   AND rank IS NOT NULL
                   AND algo_version NOT LIKE 'hist_%'
             )
-            WHERE rn <= 20
+            WHERE rn <= 15
             ORDER BY rank ASC, score DESC
         """, (yesterday,)).fetchall()
     finally:
@@ -589,7 +589,7 @@ def _score_where(min_score: float | None, max_score: float | None) -> tuple[str,
 
 
 def _top20_base_query(score_clause: str, params: list) -> str:
-    """CTE that mirrors model_pnl_report: top-20 picks per day, then filtered by score."""
+    """CTE that mirrors model_pnl_report: top-15 picks per day, then filtered by score."""
     return (
         f"SELECT best_odds, homered FROM ("
         f"  SELECT best_odds, homered, score,"
@@ -597,13 +597,13 @@ def _top20_base_query(score_clause: str, params: list) -> str:
         f"  FROM pick_factors"
         f"  WHERE homered IS NOT NULL AND rank IS NOT NULL"
         f"    AND algo_version NOT LIKE 'hist_%'"
-        f") WHERE rn <= 20 AND {score_clause}",
+        f") WHERE rn <= 15 AND {score_clause}",
         params,
     )
 
 
 def score_bucket_hit_rate(min_score: float | None, max_score: float | None) -> tuple[int, int]:
-    """Return (n_picks, n_homers) for top-20 picks whose score falls in [min_score, max_score)."""
+    """Return (n_picks, n_homers) for top-15 picks whose score falls in [min_score, max_score)."""
     conn = get_db_conn()
     try:
         _ensure_pick_factors_table(conn)
@@ -615,7 +615,7 @@ def score_bucket_hit_rate(min_score: float | None, max_score: float | None) -> t
             f"  FROM pick_factors"
             f"  WHERE homered IS NOT NULL AND rank IS NOT NULL"
             f"    AND algo_version NOT LIKE 'hist_%'"
-            f") WHERE rn <= 20 AND {score_clause}"
+            f") WHERE rn <= 15 AND {score_clause}"
         )
         row = conn.execute(sql, params).fetchone()
         return (row[0], int(row[1] or 0))
@@ -624,7 +624,7 @@ def score_bucket_hit_rate(min_score: float | None, max_score: float | None) -> t
 
 
 def score_bucket_pnl(min_score: float | None, max_score: float | None) -> float | None:
-    """Return cumulative hypothetical P&L ($10/pick) for top-20 picks in the given score range.
+    """Return cumulative hypothetical P&L ($10/pick) for top-15 picks in the given score range.
 
     Mirrors model_pnl_report: losses = -$10, wins require best_odds.
     Returns None if there are no qualifying labeled rows yet.
@@ -663,14 +663,14 @@ def score_bucket_pnl(min_score: float | None, max_score: float | None) -> float 
 _STAR_FROM_RANK_SQL = """
   COALESCE(stars,
     CASE WHEN rank <= 5 THEN 4
-         WHEN rank <= 15 THEN 3
-         WHEN rank <= 20 THEN 2
+         WHEN rank <= 10 THEN 3
+         WHEN rank <= 15 THEN 2
          ELSE 1 END)
 """
 
 
 def star_bucket_hit_rate(star_count: int) -> tuple[int, int]:
-    """Return (n_picks, n_homers) for top-20 picks with exactly star_count stars.
+    """Return (n_picks, n_homers) for top-15 picks with exactly star_count stars.
     When stars column is NULL, derives star count from rank bands."""
     conn = get_db_conn()
     try:
@@ -684,7 +684,7 @@ def star_bucket_hit_rate(star_count: int) -> tuple[int, int]:
               FROM pick_factors
               WHERE homered IS NOT NULL AND rank IS NOT NULL
                 AND algo_version NOT LIKE 'hist_%'
-            ) WHERE rn <= 20 AND derived_stars = ?
+            ) WHERE rn <= 15 AND derived_stars = ?
             """,
             (star_count,),
         ).fetchone()
@@ -694,7 +694,7 @@ def star_bucket_hit_rate(star_count: int) -> tuple[int, int]:
 
 
 def star_bucket_pnl(star_count: int) -> float | None:
-    """Return cumulative hypothetical P&L ($10/pick) for top-20 picks with star_count stars.
+    """Return cumulative hypothetical P&L ($10/pick) for top-15 picks with star_count stars.
     When stars column is NULL, derives star count from rank bands."""
     conn = get_db_conn()
     try:
@@ -708,7 +708,7 @@ def star_bucket_pnl(star_count: int) -> float | None:
               FROM pick_factors
               WHERE homered IS NOT NULL AND rank IS NOT NULL
                 AND algo_version NOT LIKE 'hist_%'
-            ) WHERE rn <= 20 AND derived_stars = ?
+            ) WHERE rn <= 15 AND derived_stars = ?
             """,
             (star_count,),
         ).fetchall()
@@ -753,7 +753,7 @@ def group_hit_rate(best_bets: bool) -> tuple[int, int]:
               FROM pick_factors
               WHERE homered IS NOT NULL AND rank IS NOT NULL
                 AND algo_version NOT LIKE 'hist_%'
-            ) WHERE rn <= 20 AND grp = ?
+            ) WHERE rn <= 15 AND grp = ?
             """,
             (1 if best_bets else 0,),
         ).fetchone()
@@ -776,7 +776,7 @@ def group_pnl(best_bets: bool) -> float | None:
               FROM pick_factors
               WHERE homered IS NOT NULL AND rank IS NOT NULL
                 AND algo_version NOT LIKE 'hist_%'
-            ) WHERE rn <= 20 AND grp = ?
+            ) WHERE rn <= 15 AND grp = ?
             """,
             (1 if best_bets else 0,),
         ).fetchall()
@@ -927,11 +927,11 @@ def model_performance_report() -> str:
         # Last 7 days trend
         row7 = conn.execute(
             "SELECT COUNT(*), SUM(homered) FROM pick_factors "
-            "WHERE homered IS NOT NULL AND rank <= 20 AND bet_date >= ?", (week_ago,)
+            "WHERE homered IS NOT NULL AND rank <= 15 AND bet_date >= ?", (week_ago,)
         ).fetchone()
         if row7[0]:
             r7 = (row7[1] or 0) / row7[0] * 100
-            add(f"\n  Last 7 days (top 20): {row7[0]} picks, {r7:.1f}% hit rate")
+            add(f"\n  Last 7 days (top 15): {row7[0]} picks, {r7:.1f}% hit rate")
 
         # ── 2. Confidence tier calibration ────────────────────────────────────
         add(f"\n  CONFIDENCE CALIBRATION")
@@ -1029,7 +1029,7 @@ def factor_performance_report() -> str:
                 homered
             FROM pick_factors
             WHERE homered IS NOT NULL
-              AND rank IS NOT NULL AND rank <= 20
+              AND rank IS NOT NULL AND rank <= 15
             ORDER BY bet_date DESC
         """).fetchall()
 

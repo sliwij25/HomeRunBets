@@ -534,7 +534,7 @@ def generate_picks_html(
     <div class="stats-tile-item">
       <div class="sti-label">HR Hit Rate</div>
       <div class="sti-value">{_esc(win_rate)}</div>
-      <div class="sti-sub">of top-20 picks</div>
+      <div class="sti-sub">of top-15 picks</div>
     </div>
     <div class="stats-tile-item">
       <div class="sti-label">Model AUC</div>

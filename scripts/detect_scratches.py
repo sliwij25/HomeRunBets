@@ -1,5 +1,5 @@
 """
-Compares today's top-20 pick_factors players against current confirmed MLB lineups.
+Compares today's top-15 pick_factors players against current confirmed MLB lineups.
 If any player is absent from their team's confirmed batting order, they are added
 to cache/scratched.json and auto_picks.sh will trigger a --use-cache re-run.
 
@@ -34,7 +34,7 @@ def detect_and_update_scratches(today: str | None = None) -> list[str]:
     """
     today = today or date.today().isoformat()
 
-    # ── 1. Get today's top-20 from pick_factors ─────────────────────────────────
+    # ── 1. Get today's top-15 picks from pick_factors ───────────────────────────
     try:
         conn = sqlite3.connect(DB_PATH)
         rows = conn.execute(
@@ -50,14 +50,14 @@ def detect_and_update_scratches(today: str | None = None) -> list[str]:
         print("[detect_scratches] No picks in DB for today — skipping")
         return []
 
-    top20 = [(p, t) for p, t in rows[:20] if t]
-    missing = [p for p, t in rows[:20] if not t]
+    top15 = [(p, t) for p, t in rows[:15] if t]
+    missing = [p for p, t in rows[:15] if not t]
     if missing:
         print(f"[detect_scratches] WARNING: {len(missing)} players have no team recorded — skipping: {missing}")
-    if not top20:
+    if not top15:
         print("[detect_scratches] No players with team data — skipping scratch check")
         return []
-    print(f"[detect_scratches] Checking {len(top20)} players against confirmed lineups...")
+    print(f"[detect_scratches] Checking {len(top15)} players against confirmed lineups...")
 
     # ── 2. Fetch current MLB lineups ─────────────────────────────────────────────
     try:
@@ -92,7 +92,7 @@ def detect_and_update_scratches(today: str | None = None) -> list[str]:
 
     # ── 4. Check each player ─────────────────────────────────────────────────────
     newly_scratched = []
-    for player, team in top20:
+    for player, team in top15:
         lineup = team_lineups.get(team)
         if not lineup:
             lineup = next(

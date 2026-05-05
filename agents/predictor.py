@@ -3967,17 +3967,17 @@ class Homer:
         # Pure score sort — best picks first regardless of game
         scored.sort(key=lambda x: x["score"], reverse=True)
 
-        # Assign star ratings by fixed rank bands within the top-20:
+        # Assign star ratings by fixed rank bands within the top-15:
         #   #1–5   → ★★★★☆  Strong
-        #   #6–15  → ★★★☆☆  Solid
-        #   #16–20 → ★★☆☆☆  Speculative
+        #   #6–10  → ★★★☆☆  Solid
+        #   #11–15 → ★★☆☆☆  Speculative
         # Picks beyond top_n (roster fallback overflows) get 1 star.
         def _stars_from_rank(rank_1based: int) -> int:
             if rank_1based <= 5:
                 return 4
-            if rank_1based <= 15:
+            if rank_1based <= 10:
                 return 3
-            if rank_1based <= 20:
+            if rank_1based <= 15:
                 return 2
             return 1
 
@@ -3991,7 +3991,7 @@ class Homer:
         if verbose:
             print(f"\n  [SCORING DEBUG] Total players scored: {len(player_signals)}")
             print("  [SCORING DEBUG] Top 20 players by score:")
-            for i, pick in enumerate(scored[:20], 1):
+            for i, pick in enumerate(scored[:15], 1):
                 status = pick["signals"].get("status", "unknown").upper()
                 print(f"    {i:2}. [{status}] {pick['player']:<24} {pick['matchup']:<25} score={pick['score']:6.1f}")
 
@@ -4182,7 +4182,7 @@ class Homer:
 
         # Step 2 — rank with deterministic Python scorer (no LLM)
         player_signals = context.get("player_signals", {})
-        ranked         = self._rank_picks_python(player_signals, top_n=20, scratched=scratched)
+        ranked         = self._rank_picks_python(player_signals, top_n=15, scratched=scratched)
 
         # Step 3 — format into a readable narrative
         return self._format_narrative(ranked, today, context.get("availability", "{}"))
