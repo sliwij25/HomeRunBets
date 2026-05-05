@@ -62,7 +62,8 @@ if rows:
     print(f"  {'-'*58}")
     for rank, player, score, confirmed, homered in rows:
         conf = "YES" if confirmed else "NO "
-        print(f"  #{rank:<3} {player:<30} {score:<7.1f} {conf:<10} {hr_symbol(homered)}")
+        score_str = f"{score:.1f}" if score is not None else "  N/A"
+        print(f"  #{rank:<3} {player:<30} {score_str:<7} {conf:<10} {hr_symbol(homered)}")
 else:
     print(f"\n✗ No pick_factors rows for {TARGET_DATE}")
 

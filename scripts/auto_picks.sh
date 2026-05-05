@@ -32,6 +32,7 @@ log "auto_picks.sh fired"
 if [ ! -f "$PICKS_FILE" ]; then
     # ── No picks yet today — check timing window ──────────────────────────────
     MINS=$($PYTHON scripts/get_first_game_time.py 2>/dev/null || echo "9999")
+    MINS=$(echo "$MINS" | grep -E '^-?[0-9]+$' || echo "9999")
     log "No picks yet. First game in ${MINS}min."
 
     if [ "$MINS" = "9999" ]; then
@@ -55,13 +56,15 @@ Check log: $LOG_FILE"
         # Too early — schedule a targeted wake
         log "Too early (${MINS}min to game). Scheduling pmset wake."
         $PYTHON scripts/schedule_wake.py 2>&1 | tee -a "$LOG_FILE"
+        WAKE_EXIT=${PIPESTATUS[0]}
+        [ "$WAKE_EXIT" -ne 0 ] && log "WARNING: schedule_wake.py failed (exit $WAKE_EXIT)"
     fi
 
 else
     # ── Picks exist — check for scratches ────────────────────────────────────
     log "Picks file exists. Checking for scratches..."
     $PYTHON scripts/detect_scratches.py 2>&1 | tee -a "$LOG_FILE"
-    SCRATCH_EXIT=$?
+    SCRATCH_EXIT=${PIPESTATUS[0]}
 
     if [ "$SCRATCH_EXIT" -eq 1 ]; then
         log "Scratches detected — running --use-cache re-run."
