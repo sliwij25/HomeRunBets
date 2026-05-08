@@ -3204,10 +3204,12 @@ class Homer:
             if _strong:
                 if p_hr9 >= 2.0:   score += 3 * _combined
                 elif p_hr9 >= 1.0: score += 2 * _combined
-                elif p_hr9 >= 0.5: score += 1 * _combined
+                elif p_hr9 >= 0.5: score += 0   # below-average pitcher — neutral
+                else:              score -= 2   # elite suppressor — meaningful penalty
             elif _moderate:
                 if p_hr9 >= 2.0:   score += 1 * _combined
                 elif p_hr9 >= 1.0: score += 1 * _combined
+                elif p_hr9 < 0.5:  score -= 1   # suppressor penalty for moderate batters too
 
         # Pitcher barrel rate allowed — % of batted balls vs this pitcher that are barrels.
         # Stronger predictor than HR/9 because it strips park and luck: a pitcher allowing
@@ -3535,6 +3537,7 @@ class Homer:
         if park_hr is not None:
             if park_hr >= 120:   score += 2
             elif park_hr >= 110: score += 1
+            elif park_hr <= 75:  score -= 4  # Severe suppressor (Oracle Park tier)
             elif park_hr <= 80:  score -= 3  # Extreme suppressor
             elif park_hr <= 85:  score -= 2  # Strong suppressor (T-Mobile 82%)
             elif park_hr <= 90:  score -= 1  # Mild suppressor
