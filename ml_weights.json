@@ -1,10 +1,10 @@
 {
   "model_type": "lightgbm",
-  "trained_on": "2026-05-05",
-  "n_samples": 194056,
-  "n_positives": 15722,
-  "cv_auc_mean": 0.6388634788277956,
-  "cv_auc_std": 0.0038594035576397707,
+  "trained_on": "2026-05-28",
+  "n_samples": 314416,
+  "n_positives": 25234,
+  "cv_auc_mean": 0.6847389968500407,
+  "cv_auc_std": 0.0024986952270945845,
   "feature_order": [
     "barrel_rate",
     "ev_avg",
