@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en" data-version="1779978508">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dingers Hotline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Serif+4:wght@400;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:         #FAFAF7;
+    --surface:    #FFFFFF;
+    --surface2:   #F3F2EE;
+    --border:     #E2DED6;
+    --border-dark:#C8C2B8;
+    --navy:       #1B2A4A;
+    --navy-mid:   #2D4070;
+    --red:        #C8102E;
+    --red-dim:    #F9E5E8;
+    --gold:       #D4A017;
+    --gold-dim:   #FDF5DC;
+    --green:      #1A6B3C;
+    --green-dim:  #E4F2EB;
+    --amber:      #B45309;
+    --amber-dim:  #FEF3C7;
+    --text:       #1A1A1A;
+    --text-sub:   #6B6560;
+    --text-dim:   #A8A29E;
+    --grass:      #2D5A27;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ─── Pinstripe header ─── */
+  .site-header {
+    background: var(--navy);
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 47px,
+      rgba(255,255,255,0.04) 47px,
+      rgba(255,255,255,0.04) 48px
+    );
+    color: #fff;
+    padding: 28px 36px 24px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+    border-bottom: 4px solid var(--red);
+  }
+
+  .header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .tg-join {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    text-align: right;
+  }
+  .tg-join-label {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.70);
+    line-height: 1.35;
+    max-width: 220px;
+  }
+  .tg-join-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #229ED9;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 10px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .tg-join-btn:hover { background: #1a8bbf; }
+  .tg-join-btn svg { flex-shrink: 0; }
+
+  .site-title {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: clamp(30px, 5vw, 52px);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #FFFFFF;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .title-ball {
+    display: inline-block;
+    width: 0.85em;
+    height: 0.85em;
+    flex-shrink: 0;
+    opacity: 0.9;
+  }
+
+  .site-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* ─── Model chips ─── */
+  .model-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.10);
+    color: #fff;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.18);
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .nav-link:hover { background: rgba(255,255,255,0.18); }
+
+  .chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 3px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.7);
+    white-space: nowrap;
+  }
+  .chip.chip-auc { color: #FBBF24; border-color: rgba(251,191,36,0.4); }
+  .chip.chip-pnl-pos { color: #4ADE80; border-color: rgba(74,222,128,0.4); }
+  .chip.chip-pnl-neg { color: #F87171; border-color: rgba(248,113,113,0.4); }
+  .chip-since { font-size: 9px; opacity: 0.55; font-weight: 400; }
+  .pnl-note { font-size: 0.65rem; color: rgba(255,255,255,0.35); align-self: center; }
+
+  /* ─── Model stats tile ─── */
+  .model-stats-tile {
+    margin: 28px 36px 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    overflow: hidden;
+  }
+  .stats-tile-roi {
+    background: var(--navy);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 28px;
+    min-width: 110px;
+    flex-shrink: 0;
+  }
+  .stats-tile-roi .roi-value {
+    font-family: 'Oswald', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+  .stats-tile-roi .roi-label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.6;
+    margin-top: 4px;
+  }
+  .stats-tile-items {
+    display: flex;
+    flex: 1;
+    border-left: 1px solid var(--border);
+  }
+  .stats-tile-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 16px 20px;
+    border-right: 1px solid var(--border);
+  }
+  .stats-tile-item:last-child { border-right: none; }
+  .stats-tile-item .sti-label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .stats-tile-item .sti-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .stats-tile-item .sti-sub {
+    font-size: 0.65rem;
+    color: var(--text-sub);
+    margin-top: 2px;
+  }
+  @media (max-width: 600px) {
+    .model-stats-tile { flex-direction: column; margin: 0 16px 20px; }
+    .stats-tile-items { flex-direction: column; border-left: none; border-top: 1px solid var(--border); }
+    .stats-tile-item { border-right: none; border-bottom: 1px solid var(--border); }
+    .stats-tile-item:last-child { border-bottom: none; }
+  }
+
+  /* ─── Streak tile ─── */
+  .streak-tile {
+    margin: 0 36px 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 18px 28px;
+    gap: 20px;
+  }
+  .streak-label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .streak-value {
+    font-family: 'Oswald', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+  .streak-type {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: -4px;
+  }
+  .streak-desc {
+    font-size: 0.75rem;
+    color: var(--text-sub);
+  }
+  @media (max-width: 600px) {
+    .streak-tile { margin: 0 16px 20px; padding: 16px 20px; }
+  }
+
+  /* ─── Tier section ─── */
+  .tier-section {
+    padding: 28px 36px 8px;
+  }
+
+  .tier-section-accent {
+    border-left: 3px solid var(--gold);
+    padding-left: 33px;
+    margin-left: 12px;
+  }
+
+  .tier-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .tier-header-accent .tier-label { color: var(--gold); }
+
+  .star-filled { color: var(--gold); }
+  .star-empty  { color: var(--border-dark); }
+
+  .tier-label {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--navy);
+    white-space: nowrap;
+  }
+
+  .tier-subtitle {
+    font-size: 11px;
+    color: var(--text-sub);
+    white-space: nowrap;
+  }
+
+  .tier-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .tier-hit-rate {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--green);
+    background: var(--green-dim);
+    border: 1px solid #A7D7B8;
+    border-radius: 3px;
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+
+  .tier-hit-count {
+    font-weight: 400;
+    color: var(--text-dim);
+    font-size: 10px;
+  }
+
+  .tier-no-history {
+    color: var(--text-dim);
+    background: var(--surface2);
+    border-color: var(--border);
+    font-weight: 400;
+  }
+
+  .tier-pnl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 2px 8px;
+    white-space: nowrap;
+    border: 1px solid;
+  }
+  .tier-pnl-pos { color: #4ADE80; background: rgba(74,222,128,0.08); border-color: rgba(74,222,128,0.4); }
+  .tier-pnl-neg { color: #F87171; background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.4); }
+  .tier-pnl-flat { color: var(--text-dim); background: var(--surface2); border-color: var(--border); }
+
+  .tier-rule {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ─── Cards grid ─── */
+  .picks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 560px), 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  /* ─── Card ─── */
+  .pick-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    display: flex;
+    gap: 14px;
+    opacity: 0;
+    transform: translateY(10px);
+    animation: reveal 0.35s ease forwards;
+    transition: box-shadow 0.15s, border-color 0.15s;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  @keyframes reveal {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .pick-card:hover {
+    border-color: var(--navy);
+    box-shadow: 0 2px 12px rgba(27,42,74,0.10);
+  }
+  .pick-card:hover .player-name { color: var(--navy-mid); }
+
+  /* ─── Rank column ─── */
+  .card-rank {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    min-width: 40px;
+    padding-top: 2px;
+  }
+
+  .rank-num {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    line-height: 1;
+    color: var(--navy);
+  }
+
+  .stars {
+    font-size: 10px;
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+
+  .badge-waiting {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7px;
+    letter-spacing: 0.04em;
+    color: var(--amber);
+    border: 1px solid #D97706;
+    background: var(--amber-dim);
+    padding: 2px 4px;
+    border-radius: 2px;
+    text-align: center;
+    line-height: 1.4;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+
+  /* ─── Card body ─── */
+  .card-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .player-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .player-name {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 19px;
+    color: var(--navy);
+    letter-spacing: 0.02em;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .conf-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 2px 7px;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+
+  .conf-high { background: var(--green-dim);  color: var(--green);  border: 1px solid #A7D7B8; }
+  .conf-med  { background: var(--amber-dim);  color: var(--amber);  border: 1px solid #FCD34D; }
+  .conf-low  { background: var(--surface2);   color: var(--text-dim); border: 1px solid var(--border); }
+
+  .score-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 2px;
+  }
+
+  .score-high { color: var(--red);     background: var(--red-dim);    border: 1px solid #F9A8B4; }
+  .score-mid  { color: var(--navy);    background: #EEF1F8;           border: 1px solid #C5CDE8; }
+  .score-low  { color: var(--text-sub); background: var(--surface2);  border: 1px solid var(--border); }
+
+  .matchup-line {
+    font-size: 12px;
+    color: var(--text-main);
+    font-family: 'Source Serif 4', serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .venue-line {
+    font-size: 11px;
+    color: var(--text-sub);
+    font-family: 'Source Serif 4', serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+  }
+
+  .pitcher-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-sub);
+  }
+
+  /* ─── Stats rows ─── */
+  .stats-row {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 9px;
+    min-width: 64px;
+  }
+
+  .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1;
+  }
+
+  /* ─── Tags ─── */
+  .tags-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    letter-spacing: 0.02em;
+  }
+
+  .tag-green { color: var(--green);  background: var(--green-dim);  border-color: #A7D7B8; }
+  .tag-red   { color: var(--red);    background: var(--red-dim);    border-color: #F9A8B4; }
+  .tag-amber { color: var(--amber);  background: var(--amber-dim);  border-color: #FCD34D; }
+  .tag-dim   { color: var(--text-sub); background: var(--surface2); border-color: var(--border); }
+  .tag-warn  { color: #92400E;       background: #FEF3C7;           border-color: #FCD34D; }
+
+  /* ─── Why line ─── */
+  .why-line {
+    font-size: 12px;
+    color: var(--text-sub);
+    line-height: 1.4;
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+  }
+
+  .why-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-right: 4px;
+    font-style: normal;
+  }
+
+  .odds-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-sub);
+    margin-top: 6px;
+  }
+  .odds-best {
+    color: #4ADE80;
+    font-weight: 700;
+  }
+  .odds-book {
+    color: var(--text-dim);
+    font-size: 10px;
+  }
+  .odds-pin {
+    color: var(--text-dim);
+    font-size: 10px;
+  }
+
+  /* ─── Footer ─── */
+  .site-footer {
+    background: var(--navy);
+    border-top: 3px solid var(--red);
+    padding: 14px 36px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.06em;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 24px;
+  }
+  .disclaimer {
+    width: 100%;
+    font-size: 9px;
+    color: rgba(255,255,255,0.25);
+    letter-spacing: 0.04em;
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  /* ─── EV Plays strip ─── */
+  .ev-plays-section {
+    padding: 24px 36px 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+  .ev-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .ev-section-title {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
+    white-space: nowrap;
+  }
+  .ev-section-sub {
+    font-size: 11px;
+    color: var(--text-sub);
+    white-space: nowrap;
+  }
+  .ev-section-rule {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .ev-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+  }
+  .ev-card {
+    background: var(--surface);
+    border: 1.5px solid var(--gold);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: default;
+    transition: box-shadow 0.15s;
+    min-width: 0;
+  }
+  .ev-card:hover { box-shadow: 0 2px 10px rgba(212,160,23,0.25); }
+  .ev-card-rank {
+    font-size: 0.65rem; font-weight: 700; color: var(--gold);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .ev-card-name {
+    font-family: 'Oswald', sans-serif; font-size: 0.88rem; font-weight: 600;
+    color: var(--navy); line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ev-card-matchup {
+    font-size: 0.65rem; color: var(--text-sub);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ev-card-stars { font-size: 0.75rem; }
+  .ev-card-ev-row {
+    display: flex; align-items: center; gap: 6px; margin-top: 2px;
+  }
+  .ev-card-ev {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; font-weight: 700;
+  }
+  .ev-confirmed { color: var(--green); }
+  .ev-est       { color: var(--amber); }
+  .ev-model     { color: var(--text-dim); }
+  .ev-card-overall {
+    font-size: 0.62rem; color: var(--text-dim);
+  }
+  @media (max-width: 700px) {
+    .ev-plays-section { padding: 16px 16px 8px; }
+    .ev-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 480px) {
+    .ev-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 600px) {
+    .site-header   { padding: 18px; }
+    .tier-section          { padding: 20px 16px 4px; }
+    .tier-section-accent   { padding-left: 13px; margin-left: 4px; }
+    .picks-grid    { gap: 8px; }
+    .site-footer   { padding: 12px 16px; }
+    .stat          { min-width: 54px; }
+    .model-stats-tile { margin: 0 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-left">
+    <div class="site-title">
+      <svg class="title-ball" fill="#ffffff" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><g><path d="M455.857,56.144c-74.86-74.859-196.662-74.859-271.521,0C17.087,223.392-9.275,272.783,2.398,298.264c8.318,18.153,32.898,19.077,63.015,17.249l-36.537,97.203c-6.838,18.194-2.549,38.035,11.195,51.778c13.744,13.743,33.583,18.035,51.778,11.195L197.2,436.089c-2.507,34.987-3.349,64.4,16.534,73.511c3.325,1.524,7.055,2.4,11.403,2.4c28.973-0.002,85.294-38.91,230.72-184.335C530.715,252.806,530.715,131.003,455.857,56.144z M441.431,313.239C369.446,385.224,316.37,433.95,279.174,462.2c-41.868,31.797-54.167,30.124-56.94,28.854c-2.851-1.307-4.901-7.374-5.626-16.646c-0.922-11.81,0.244-27.541,1.479-44.196c0.209-2.826,0.421-5.681,0.625-8.557c0.247-3.466-1.288-6.82-4.073-8.899c-1.788-1.335-3.934-2.026-6.102-2.026c-1.209,0-2.424,0.214-3.589,0.652l-120.277,45.21c-10.765,4.047-22.043,1.608-30.174-6.524c-8.131-8.131-10.57-19.411-6.524-30.174l42.126-112.072c1.224-3.258,0.703-6.915-1.382-9.702c-2.085-2.787-5.444-4.321-8.919-4.06c-14.536,1.076-31.012,2.295-42.857,1.278c-8.892-0.763-14.721-2.793-15.994-5.572c-1.27-2.772-2.944-15.072,28.855-56.941c28.25-37.196,76.975-90.271,148.96-162.255c66.904-66.905,175.764-66.905,242.669,0C508.335,137.474,508.335,246.335,441.431,313.239z"/></g><g><path d="M320.096,28.297c-90.213,0-163.608,73.394-163.608,163.608s73.395,163.608,163.608,163.608s163.608-73.395,163.608-163.608S410.31,28.297,320.096,28.297z M320.096,48.698c36.338,0,69.551,13.613,94.828,35.995c-26.187,23.225-59.477,35.903-94.828,35.903c-35.351,0-68.641-12.679-94.828-35.903C250.544,62.309,283.758,48.698,320.096,48.698z M320.096,335.111c-36.338,0.001-69.552-13.611-94.829-35.995c26.187-23.225,59.478-35.903,94.829-35.903c35.351,0,68.641,12.679,94.828,35.903C389.647,321.499,356.433,335.111,320.096,335.111z M429.215,284.535c-30.034-26.977-68.377-41.722-109.12-41.722c-40.743,0-79.086,14.745-109.12,41.722c-21.246-24.99-34.087-57.336-34.087-92.631c0.001-35.293,12.842-67.64,34.088-92.63c30.034,26.977,68.377,41.722,109.12,41.722s79.086-14.745,109.119-41.722c21.246,24.99,34.087,57.336,34.087,92.63C463.302,227.198,450.46,259.545,429.215,284.535z"/></g></svg>
+      Dingers Hotline
+    </div>
+    <div class="site-date">Latest Update: 2026-05-28 09:28 AM &nbsp;·&nbsp; 15 Picks</div>
+  </div>
+  <div class="model-chips">
+    
+    <a class="nav-link" href="pick-of-the-day.html">Pick of Day ★</a>
+    <a class="nav-link" href="leaderboard.html">HR Leaders →</a>
+  </div>
+  <div class="tg-join">
+    <div class="tg-join-label">Get notified the moment today's picks are ready — join the free Telegram channel.</div>
+    <a class="tg-join-btn" href="https://t.me/+BHJ6UMUkhyoxNzEx" target="_blank" rel="noopener">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.26 13.835l-2.938-.916c-.638-.203-.651-.638.136-.944l11.438-4.41c.532-.194.997.131.998.656z"/></svg>
+      Join Dingers Hotline on Telegram
+    </a>
+  </div>
+</header>
+
+<div class="model-stats-tile">
+  <div class="stats-tile-roi">
+    <div class="roi-value" style="color:#4ADE80">+3.6%</div>
+    <div class="roi-label">Model ROI</div>
+  </div>
+  <div class="stats-tile-items">
+    <div class="stats-tile-item">
+      <div class="sti-label">Cumulative P&amp;L</div>
+      <div class="sti-value" style="color:#4ADE80">$+202.30 <span style="color:#4ADE80;font-size:0.75rem;opacity:0.8">($+85.00 yesterday)</span></div>
+      <div class="sti-sub">since Apr 16 · 1 unit = $10/pick</div>
+    </div>
+    <div class="stats-tile-item">
+      <div class="sti-label">HR Hit Rate</div>
+      <div class="sti-value">22.0%</div>
+      <div class="sti-sub">of top-15 picks</div>
+    </div>
+    <div class="stats-tile-item">
+      <div class="sti-label">Model AUC</div>
+      <div class="sti-value">0.685</div>
+      <div class="sti-sub">ML weight 46%</div>
+    </div>
+    <div class="stats-tile-item">
+      <div class="sti-label">Days Tracked</div>
+      <div class="sti-value">38</div>
+      <div class="sti-sub">labeled results</div>
+    </div>
+    <div class="stats-tile-item">
+      <div class="sti-label">Current Streak</div>
+      <div class="sti-value" style="color:#4ADE80">3 WIN</div>
+      <div class="sti-sub">consecutive days</div>
+    </div>
+  </div>
+</div>
+
+
+<section class="ev-plays-section">
+  <div class="ev-section-header">
+    <span class="ev-section-title">Top EV Plays</span>
+    <span class="ev-section-sub">Top 5 by expected value</span>
+    <span class="tier-hit-rate">25% HR rate<span class="tier-hit-count"> (212 picks)</span></span><span class="tier-pnl tier-pnl-pos">$+285.70</span>
+    <div class="ev-section-rule"></div>
+  </div>
+  <div class="ev-grid">
+<div class="ev-card">
+  <div class="ev-card-rank">EV #1</div>
+  <div class="ev-card-name">Mike Trout</div>
+  <div class="ev-card-matchup">Los Angeles Angels @ Detroit Tigers</div>
+  <div class="ev-card-stars"><span class="stars"><span class="star-filled">★★★</span><span class="star-empty">☆☆</span></span></div>
+</div><div class="ev-card">
+  <div class="ev-card-rank">EV #2</div>
+  <div class="ev-card-name">Yordan Alvarez</div>
+  <div class="ev-card-matchup">Houston Astros @ Texas Rangers</div>
+  <div class="ev-card-stars"><span class="stars"><span class="star-filled">★★★★</span><span class="star-empty">☆</span></span></div>
+</div><div class="ev-card">
+  <div class="ev-card-rank">EV #3</div>
+  <div class="ev-card-name">Munetaka Murakami</div>
+  <div class="ev-card-matchup">Minnesota Twins @ Chicago White Sox</div>
+  <div class="ev-card-stars"><span class="stars"><span class="star-filled">★★★★</span><span class="star-empty">☆</span></span></div>
+</div><div class="ev-card">
+  <div class="ev-card-rank">EV #4</div>
+  <div class="ev-card-name">Byron Buxton</div>
+  <div class="ev-card-matchup">Minnesota Twins @ Chicago White Sox</div>
+  <div class="ev-card-stars"><span class="stars"><span class="star-filled">★★★★</span><span class="star-empty">☆</span></span></div>
+</div><div class="ev-card">
+  <div class="ev-card-rank">EV #5</div>
+  <div class="ev-card-name">Matt Olson</div>
+  <div class="ev-card-matchup">Atlanta Braves @ Boston Red Sox</div>
+  <div class="ev-card-stars"><span class="stars"><span class="star-filled">★★★★</span><span class="star-empty">☆</span></span></div>
+</div>
+  </div>
+</section>
+    <section class="tier-section">
+        <div class="tier-header"><span class="tier-label">Strong Plays</span><span class="tier-subtitle">High-confidence model picks</span><span class="tier-count">5 picks</span><span class="tier-hit-rate">25% HR rate<span class="tier-hit-count"> (190 picks)</span></span><span class="tier-pnl tier-pnl-pos">$+181.30</span><div class="tier-rule"></div></div>
+        <div class="picks-grid">
+
+        <a class="pick-card" href="player-card.html?player=yordan-alvarez" style="animation-delay:0.00s">
+            <div class="card-rank">
+                <span class="rank-num">#1</span>
+                <span class="stars"><span class="star-filled">★★★★</span><span class="star-empty">☆</span></span>
+                <span class="badge-waiting">LINEUP PENDING</span>
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Yordan Alvarez</span>
+                    <span class="score-badge score-high">18.9</span>
+                </div>
+                <div class="matchup-line">Houston Astros @ Texas Rangers &nbsp;·&nbsp; <strong>8:05 PM ET</strong></div>
+                <div class="venue-line">Globe Life Field &nbsp;·&nbsp; Away</div>
+                <div class="pitcher-line">LHB vs Nathan Eovaldi (R) &nbsp;·&nbsp; #2 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.380</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">18.2%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">52.5%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">94.3 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">45.6%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">39.4%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">18</span></div></div>
+                <div class="tags-row"><span class="tag tag-red">Park 89%</span><span class="tag tag-amber">7HR / 14d</span><span class="tag tag-red">Pitcher L3: 2.2 HR/9</span><span class="tag tag-green">H2H 1HR/—AB</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> xISO 0.380, barrel 18.2%, hard hit 52.5%, pitcher L3: 2.2HR/9, h2h 1HR/NoneAB, career Globe Life Field: 17HR, 7HR last 14d</div>
+            </div>
+        </a>
+        <a class="pick-card" href="player-card.html?player=munetaka-murakami" style="animation-delay:0.04s">
+            <div class="card-rank">
+                <span class="rank-num">#2</span>
+                <span class="stars"><span class="star-filled">★★★★</span><span class="star-empty">☆</span></span>
+                <span class="badge-waiting">LINEUP PENDING</span>
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Munetaka Murakami</span>
+                    <span class="score-badge score-mid">17.3</span>
+                </div>
+                <div class="matchup-line">Minnesota Twins @ Chicago White Sox &nbsp;·&nbsp; <strong>2:10 PM ET</strong></div>
+                <div class="venue-line">Rate Field &nbsp;·&nbsp; Home</div>
+                <div class="pitcher-line">LHB vs Kendry Rojas (L) &nbsp;·&nbsp; #2 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.310</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">20.7%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">57.8%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">94.1 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">28.4%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">41.4%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">19</span></div></div>
+                <div class="tags-row"><span class="tag tag-dim">Park 100%</span><span class="tag tag-dim">70°F</span><span class="tag tag-green">Wind 12mph (out)</span><span class="tag tag-amber">5HR / 14d</span><span class="tag tag-dim">Pitcher L3: 0.0 HR/9</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> xISO 0.310, barrel 20.7%, hard hit 57.8%, career Rate Field: 10HR, 5HR last 14d, Small outfield</div>
+            </div>
+        </a>
+        <a class="pick-card" href="player-card.html?player=byron-buxton" style="animation-delay:0.08s">
+            <div class="card-rank">
+                <span class="rank-num">#3</span>
+                <span class="stars"><span class="star-filled">★★★★</span><span class="star-empty">☆</span></span>
+                <span class="badge-waiting">LINEUP PENDING</span>
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Byron Buxton</span>
+                    <span class="score-badge score-mid">16.4</span>
+                </div>
+                <div class="matchup-line">Minnesota Twins @ Chicago White Sox &nbsp;·&nbsp; <strong>2:10 PM ET</strong></div>
+                <div class="venue-line">Rate Field &nbsp;·&nbsp; Away</div>
+                <div class="pitcher-line">RHB vs Davis Martin (R) &nbsp;·&nbsp; #4 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.260</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">19.3%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">46.4%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">90.0 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">32.9%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">37.9%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">16</span></div></div>
+                <div class="tags-row"><span class="tag tag-dim">Park 100%</span><span class="tag tag-dim">70°F</span><span class="tag tag-green">Wind 12mph (out)</span><span class="tag tag-amber">2HR / 14d</span><span class="tag tag-dim">Pitcher L3: 0.8 HR/9</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> xISO 0.260, barrel 19.3%, hard hit 46.4%, career Rate Field: 12HR, Small outfield</div>
+            </div>
+        </a>
+        <a class="pick-card" href="player-card.html?player=matt-olson" style="animation-delay:0.12s">
+            <div class="card-rank">
+                <span class="rank-num">#4</span>
+                <span class="stars"><span class="star-filled">★★★★</span><span class="star-empty">☆</span></span>
+                <span class="badge-waiting">LINEUP PENDING</span>
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Matt Olson</span>
+                    <span class="score-badge score-mid">15.7</span>
+                </div>
+                <div class="matchup-line">Atlanta Braves @ Boston Red Sox &nbsp;·&nbsp; <strong>4:10 PM ET</strong></div>
+                <div class="venue-line">Fenway Park &nbsp;·&nbsp; Away</div>
+                <div class="pitcher-line">LHB vs Payton Tolle (L) &nbsp;·&nbsp; #3 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.290</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">15.8%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">51.3%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">93.1 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">32.3%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">34.2%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">15</span></div></div>
+                <div class="tags-row"><span class="tag tag-red">Park 85%</span><span class="tag tag-dim">59°F</span><span class="tag tag-red">Wind 6mph (in)</span><span class="tag tag-amber">1HR / 14d</span><span class="tag tag-dim">Pitcher L3: 0.6 HR/9</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> xISO 0.290, barrel 15.8%, hard hit 51.3%, career Fenway Park: 7HR, park 85%</div>
+            </div>
+        </a>
+        <a class="pick-card" href="player-card.html?player=pete-alonso" style="animation-delay:0.16s">
+            <div class="card-rank">
+                <span class="rank-num">#5</span>
+                <span class="stars"><span class="star-filled">★★★★</span><span class="star-empty">☆</span></span>
+                <span class="badge-waiting">LINEUP PENDING</span>
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Pete Alonso</span>
+                    <span class="score-badge score-mid">15.3</span>
+                </div>
+                <div class="matchup-line">Toronto Blue Jays @ Baltimore Orioles &nbsp;·&nbsp; <strong>6:35 PM ET</strong></div>
+                <div class="venue-line">Oriole Park at Camden Yards &nbsp;·&nbsp; Home</div>
+                <div class="pitcher-line">RHB vs Patrick Corbin (L) &nbsp;·&nbsp; #4 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.250</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">13.0%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">55.2%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">95.0 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">33.8%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">33.1%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">10</span></div></div>
+                <div class="tags-row"><span class="tag tag-red">Park 81%</span><span class="tag tag-dim">72°F</span><span class="tag tag-red">Wind 11mph (in)</span><span class="tag tag-amber">2HR / 14d</span><span class="tag tag-amber">Pitcher L3: 1.1 HR/9</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> xISO 0.250, barrel 13.0%, hard hit 55.2%, pitcher L3: 1.1HR/9, career Oriole Park at Camden : 10HR, park 81%, weather 87% HR factor</div>
+            </div>
+        </a>
+        </div>
+    </section>
+
+    <section class="tier-section">
+        <div class="tier-header"><span class="tier-label">Solid Looks</span><span class="tier-subtitle">Good signals across the board</span><span class="tier-count">5 picks</span><span class="tier-hit-rate">20% HR rate<span class="tier-hit-count"> (196 picks)</span></span><span class="tier-pnl tier-pnl-neg">$-16.10</span><div class="tier-rule"></div></div>
+        <div class="picks-grid">
+
+        <a class="pick-card" href="player-card.html?player=mike-trout" style="animation-delay:0.20s">
+            <div class="card-rank">
+                <span class="rank-num">#6</span>
+                <span class="stars"><span class="star-filled">★★★</span><span class="star-empty">☆☆</span></span>
+                
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Mike Trout</span>
+                    <span class="score-badge score-low">12.7</span>
+                </div>
+                <div class="matchup-line">Los Angeles Angels @ Detroit Tigers &nbsp;·&nbsp; <strong>1:10 PM ET</strong></div>
+                <div class="venue-line">Comerica Park &nbsp;·&nbsp; Away</div>
+                <div class="pitcher-line">RHB vs Jack Flaherty (R) &nbsp;·&nbsp; #2 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.320</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">20.3%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">47.8%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">91.0 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">33.6%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">35.8%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">13</span></div></div>
+                <div class="tags-row"><span class="tag tag-dim">Park 94%</span><span class="tag tag-dim">70°F</span><span class="tag tag-green">Wind 13mph (out)</span><span class="tag tag-amber">2HR / 14d</span><span class="tag tag-dim">Pitcher L3: 0.8 HR/9</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> xISO 0.320, barrel 20.3%, hard hit 47.8%, career Comerica Park: 4HR, BPP rank #7</div>
+            </div>
+        </a>
+        <a class="pick-card" href="player-card.html?player=colson-montgomery" style="animation-delay:0.24s">
+            <div class="card-rank">
+                <span class="rank-num">#7</span>
+                <span class="stars"><span class="star-filled">★★★</span><span class="star-empty">☆☆</span></span>
+                <span class="badge-waiting">LINEUP PENDING</span>
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Colson Montgomery</span>
+                    <span class="score-badge score-low">11.6</span>
+                </div>
+                <div class="matchup-line">Minnesota Twins @ Chicago White Sox &nbsp;·&nbsp; <strong>2:10 PM ET</strong></div>
+                <div class="venue-line">Rate Field &nbsp;·&nbsp; Home</div>
+                <div class="pitcher-line">LHB vs Kendry Rojas (L) &nbsp;·&nbsp; #3 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.220</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">13.4%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">42.5%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">89.8 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">36.2%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">33.9%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">13</span></div></div>
+                <div class="tags-row"><span class="tag tag-dim">Park 100%</span><span class="tag tag-dim">70°F</span><span class="tag tag-green">Wind 12mph (out)</span><span class="tag tag-amber">2HR / 14d</span><span class="tag tag-dim">Pitcher L3: 0.0 HR/9</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> xISO 0.220, barrel 13.4%, career Rate Field: 16HR, Small outfield</div>
+            </div>
+        </a>
+        <a class="pick-card" href="player-card.html?player=brandon-lowe" style="animation-delay:0.28s">
+            <div class="card-rank">
+                <span class="rank-num">#8</span>
+                <span class="stars"><span class="star-filled">★★★</span><span class="star-empty">☆☆</span></span>
+                <span class="badge-waiting">LINEUP PENDING</span>
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Brandon Lowe</span>
+                    <span class="score-badge score-low">9.5</span>
+                </div>
+                <div class="matchup-line">Chicago Cubs @ Pittsburgh Pirates &nbsp;·&nbsp; <strong>6:40 PM ET</strong></div>
+                <div class="venue-line">PNC Park &nbsp;·&nbsp; Home</div>
+                <div class="pitcher-line">LHB vs Colin Rea (R) &nbsp;·&nbsp; #2 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.260</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">13.5%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">46.8%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">89.8 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">39.0%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">32.6%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">13</span></div></div>
+                <div class="tags-row"><span class="tag tag-red">Park 85%</span><span class="tag tag-dim">68°F</span><span class="tag tag-green">Wind 10mph (out)</span><span class="tag tag-amber">4HR / 14d</span><span class="tag tag-amber">Pitcher L3: 1.0 HR/9</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> xISO 0.260, barrel 13.5%, hard hit 46.8%, pitcher L3: 1.0HR/9, career PNC Park: 6HR, 4HR last 14d, park 85%</div>
+            </div>
+        </a>
+        <a class="pick-card" href="player-card.html?player=michael-harris-ii" style="animation-delay:0.32s">
+            <div class="card-rank">
+                <span class="rank-num">#9</span>
+                <span class="stars"><span class="star-filled">★★★</span><span class="star-empty">☆☆</span></span>
+                <span class="badge-waiting">LINEUP PENDING</span>
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Michael Harris II</span>
+                    <span class="score-badge score-low">9.0</span>
+                </div>
+                <div class="matchup-line">Atlanta Braves @ Boston Red Sox &nbsp;·&nbsp; <strong>4:10 PM ET</strong></div>
+                <div class="venue-line">Fenway Park &nbsp;·&nbsp; Away</div>
+                <div class="pitcher-line">LHB vs Payton Tolle (L) &nbsp;·&nbsp; #6 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.270</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">16.3%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">56.1%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">93.4 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">29.1%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">27.0%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">12</span></div></div>
+                <div class="tags-row"><span class="tag tag-red">Park 85%</span><span class="tag tag-dim">59°F</span><span class="tag tag-red">Wind 6mph (in)</span><span class="tag tag-amber">5HR / 14d</span><span class="tag tag-dim">Pitcher L3: 0.6 HR/9</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> xISO 0.270, barrel 16.3%, hard hit 56.1%, career Fenway Park: 1HR, 5HR last 14d, park 85%</div>
+            </div>
+        </a>
+        <a class="pick-card" href="player-card.html?player=randal-grichuk" style="animation-delay:0.36s">
+            <div class="card-rank">
+                <span class="rank-num">#10</span>
+                <span class="stars"><span class="star-filled">★★★</span><span class="star-empty">☆☆</span></span>
+                <span class="badge-waiting">LINEUP PENDING</span>
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Randal Grichuk</span>
+                    <span class="score-badge score-low">8.9</span>
+                </div>
+                <div class="matchup-line">Minnesota Twins @ Chicago White Sox &nbsp;·&nbsp; <strong>2:10 PM ET</strong></div>
+                <div class="venue-line">Rate Field &nbsp;·&nbsp; Home</div>
+                <div class="pitcher-line">RHB vs Kendry Rojas (L) &nbsp;·&nbsp; #4 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.290</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">18.2%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">47.7%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">91.8 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">45.5%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">38.6%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">4</span></div></div>
+                <div class="tags-row"><span class="tag tag-dim">Park 100%</span><span class="tag tag-dim">70°F</span><span class="tag tag-green">Wind 12mph (out)</span><span class="tag tag-amber">2HR / 14d</span><span class="tag tag-dim">Pitcher L3: 0.0 HR/9</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> xISO 0.290, barrel 18.2%, hard hit 47.7%, career Rate Field: 5HR, BPP rank #6, Small outfield</div>
+            </div>
+        </a>
+        </div>
+    </section>
+
+    <section class="tier-section">
+        <div class="tier-header"><span class="tier-label">Worth Watching</span><span class="tier-subtitle">Moderate edge, worth a look</span><span class="tier-count">5 picks</span><span class="tier-hit-rate">20% HR rate<span class="tier-hit-count"> (172 picks)</span></span><span class="tier-pnl tier-pnl-pos">$+44.10</span><div class="tier-rule"></div></div>
+        <div class="picks-grid">
+
+        <a class="pick-card" href="player-card.html?player=samuel-basallo" style="animation-delay:0.40s">
+            <div class="card-rank">
+                <span class="rank-num">#11</span>
+                <span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆☆☆</span></span>
+                <span class="badge-waiting">LINEUP PENDING</span>
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Samuel Basallo</span>
+                    <span class="score-badge score-low">8.4</span>
+                </div>
+                <div class="matchup-line">Toronto Blue Jays @ Baltimore Orioles &nbsp;·&nbsp; <strong>6:35 PM ET</strong></div>
+                <div class="venue-line">Oriole Park at Camden Yards &nbsp;·&nbsp; Home</div>
+                <div class="pitcher-line">LHB vs Patrick Corbin (L) &nbsp;·&nbsp; #10 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.220</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">11.3%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">49.5%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">92.9 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">33.6%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">27.1%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">8</span></div></div>
+                <div class="tags-row"><span class="tag tag-red">Park 81%</span><span class="tag tag-dim">72°F</span><span class="tag tag-red">Wind 11mph (in)</span><span class="tag tag-amber">3HR / 14d</span><span class="tag tag-amber">Pitcher L3: 1.1 HR/9</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> xISO 0.220, barrel 11.3%, hard hit 49.5%, pitcher L3: 1.1HR/9, career Oriole Park at Camden : 8HR, 3HR last 14d, park 81%, weather 87% HR factor</div>
+            </div>
+        </a>
+        <a class="pick-card" href="player-card.html?player=kazuma-okamoto" style="animation-delay:0.44s">
+            <div class="card-rank">
+                <span class="rank-num">#12</span>
+                <span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆☆☆</span></span>
+                <span class="badge-waiting">LINEUP PENDING</span>
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Kazuma Okamoto</span>
+                    <span class="score-badge score-low">8.3</span>
+                </div>
+                <div class="matchup-line">Toronto Blue Jays @ Baltimore Orioles &nbsp;·&nbsp; <strong>6:35 PM ET</strong></div>
+                <div class="venue-line">Oriole Park at Camden Yards &nbsp;·&nbsp; Away</div>
+                <div class="pitcher-line">RHB vs Chris Bassitt (R) &nbsp;·&nbsp; #5 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.220</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">14.3%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">52.4%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">92.8 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">32.5%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">30.2%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">10</span></div></div>
+                <div class="tags-row"><span class="tag tag-red">Park 81%</span><span class="tag tag-dim">72°F</span><span class="tag tag-red">Wind 11mph (in)</span><span class="tag tag-amber">1HR / 14d</span><span class="tag tag-dim">Pitcher L3: 0.2 HR/9</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> xISO 0.220, barrel 14.3%, hard hit 52.4%, park 81%, weather 87% HR factor</div>
+            </div>
+        </a>
+        <a class="pick-card" href="player-card.html?player=jo-adell" style="animation-delay:0.48s">
+            <div class="card-rank">
+                <span class="rank-num">#13</span>
+                <span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆☆☆</span></span>
+                
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Jo Adell</span>
+                    <span class="score-badge score-low">8.2</span>
+                </div>
+                <div class="matchup-line">Los Angeles Angels @ Detroit Tigers &nbsp;·&nbsp; <strong>1:10 PM ET</strong></div>
+                <div class="venue-line">Comerica Park &nbsp;·&nbsp; Away</div>
+                <div class="pitcher-line">RHB vs Jack Flaherty (R) &nbsp;·&nbsp; #6 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.190</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">8.9%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">47.2%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">91.7 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">33.3%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">27.7%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">8</span></div></div>
+                <div class="tags-row"><span class="tag tag-dim">Park 94%</span><span class="tag tag-dim">70°F</span><span class="tag tag-green">Wind 13mph (out)</span><span class="tag tag-amber">2HR / 14d</span><span class="tag tag-dim">Pitcher L3: 0.8 HR/9</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> hard hit 47.2%, career Comerica Park: 4HR</div>
+            </div>
+        </a>
+        <a class="pick-card" href="player-card.html?player=willson-contreras" style="animation-delay:0.52s">
+            <div class="card-rank">
+                <span class="rank-num">#14</span>
+                <span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆☆☆</span></span>
+                <span class="badge-waiting">LINEUP PENDING</span>
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Willson Contreras</span>
+                    <span class="score-badge score-low">8.2</span>
+                </div>
+                <div class="matchup-line">Atlanta Braves @ Boston Red Sox &nbsp;·&nbsp; <strong>4:10 PM ET</strong></div>
+                <div class="venue-line">Fenway Park &nbsp;·&nbsp; Home</div>
+                <div class="pitcher-line">RHB vs Chris Sale (L) &nbsp;·&nbsp; #4 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.260</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">15.5%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">43.5%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">89.9 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">32.8%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">26.0%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">11</span></div></div>
+                <div class="tags-row"><span class="tag tag-red">Park 85%</span><span class="tag tag-dim">59°F</span><span class="tag tag-red">Wind 6mph (in)</span><span class="tag tag-amber">3HR / 14d</span><span class="tag tag-amber">Pitcher L3: 1.4 HR/9</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> xISO 0.260, barrel 15.5%, pitcher L3: 1.4HR/9, career Fenway Park: 5HR, BPP rank #10, 3HR last 14d, park 85%</div>
+            </div>
+        </a>
+        <a class="pick-card" href="player-card.html?player=jake-burger" style="animation-delay:0.56s">
+            <div class="card-rank">
+                <span class="rank-num">#15</span>
+                <span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆☆☆</span></span>
+                <span class="badge-waiting">LINEUP PENDING</span>
+            </div>
+            <div class="card-body">
+                <div class="player-row">
+                    <span class="player-name">Jake Burger</span>
+                    <span class="score-badge score-low">8.1</span>
+                </div>
+                <div class="matchup-line">Houston Astros @ Texas Rangers &nbsp;·&nbsp; <strong>8:05 PM ET</strong></div>
+                <div class="venue-line">Globe Life Field &nbsp;·&nbsp; Home</div>
+                <div class="pitcher-line">RHB vs Spencer Arrighetti (R) &nbsp;·&nbsp; #5 in order</div>
+                <div class="stats-row"><div class="stat"><span class="stat-label">xISO</span><span class="stat-value">0.170</span></div><div class="stat"><span class="stat-label">Barrel</span><span class="stat-value">9.9%</span></div><div class="stat"><span class="stat-label">Hard Hit</span><span class="stat-value">48.9%</span></div></div><div class="stats-row"><div class="stat"><span class="stat-label">EV Avg</span><span class="stat-value">90.3 mph</span></div><div class="stat"><span class="stat-label">Sweet Sp</span><span class="stat-value">31.9%</span></div><div class="stat"><span class="stat-label">FB%</span><span class="stat-value">26.2%</span></div><div class="stat"><span class="stat-label">Season HR</span><span class="stat-value">10</span></div></div>
+                <div class="tags-row"><span class="tag tag-red">Park 89%</span><span class="tag tag-amber">3HR / 14d</span><span class="tag tag-dim">Pitcher L3: 0.4 HR/9</span></div>
+                
+                <div class="why-line"><span class="why-label">Why:</span> hard hit 48.9%, career Globe Life Field: 9HR, 3HR last 14d</div>
+            </div>
+        </a>
+        </div>
+    </section>
+
+<footer class="site-footer">
+  <span>Dingers Hotline</span>
+  <span>Generated 2026-05-28 09:28 AM &nbsp;·&nbsp; Model AUC 0.685</span>
+  <div class="disclaimer">Must be 21+ and present in a legal sports wagering state. Gambling involves risk. Please gamble responsibly. If you or someone you know has a gambling problem, call or text <strong>1-800-GAMBLER</strong>.</div>
+</footer>
+
+</body>
+</html>
