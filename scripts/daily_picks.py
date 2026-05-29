@@ -71,7 +71,7 @@ print("=" * 60)
 
 from agents import Homer
 from agents.predictor import fetch_odds_comparison
-from agents.bet_tracker import save_pick_factors, backfill_pick_odds, model_performance_report, model_pnl_report, group_hit_rate, group_pnl, star_bucket_hit_rate, star_bucket_pnl, yesterday_results_snapshot, trending_picks
+from agents.bet_tracker import save_pick_factors, backfill_pick_odds, model_performance_report, model_pnl_report, group_hit_rate, star_bucket_hit_rate, yesterday_results_snapshot, trending_picks
 from generate_html import generate_picks_html, generate_leaderboard_html, generate_player_data_json
 
 # ── Auto-maintenance (runs every morning before picks) ─────────────────────────
@@ -567,24 +567,22 @@ try:
     summary = pnl_data.get("model_pnl_summary", {})
     if summary and summary.get("days_tracked", 0) > 0:
         if args.brief:
-            print(f"  Model P&L: {summary['cumulative_pnl']}  ROI: {summary['roi']}  "
-                  f"({summary['win_pct']} hit rate, {summary['days_tracked']}d)")
+            print(f"  Hit Rate: {summary['win_pct']}  ({summary['days_tracked']}d tracked)")
         else:
             print("\n" + "=" * 60)
-            print("  MODEL P&L  (fictitious — $10 on every top-15 pick)")
+            print("  MODEL HIT RATE")
             print("=" * 60)
             print(f"  Days tracked:   {summary['days_tracked']}")
             print(f"  Total picks:    {summary['total_picks_with_odds']}  ({summary['win_pct']} hit rate)")
-            print(f"  Total wagered:  {summary['total_wagered']}")
-            print(f"  Cumulative P&L: {summary['cumulative_pnl']}")
-            print(f"  ROI:            {summary['roi']}")
             daily = pnl_data.get("daily", [])
             if daily:
-                print(f"\n  {'Date':<12} {'Picks':>6} {'Wins':>5} {'Day P&L':>10} {'Cumulative':>12}")
-                print("  " + "-" * 48)
+                print(f"\n  {'Date':<12} {'Picks':>6} {'Wins':>5} {'Rate':>8}")
+                print("  " + "-" * 36)
                 for d in daily[-10:]:
-                    print(f"  {d['date']:<12} {d['picks_with_odds']:>6} {d['wins']:>5} "
-                          f"{d['day_pnl']:>10} {d['cumulative_pnl']:>12}")
+                    n = d['picks_with_odds']
+                    w = d['wins']
+                    rate_str = f"{w/n*100:.0f}%" if n else "—"
+                    print(f"  {d['date']:<12} {n:>6} {w:>5} {rate_str:>8}")
 except Exception:
     pass
 
@@ -601,48 +599,47 @@ try:
             _auc = _wj.get("cv_auc_mean", 0.0)
             _ml_influence = min(0.7, max(0.0, (_auc - 0.5) * 2.5))
 
-        # Model fictitious P&L (pick_factors with best_odds — NOT personal bets)
-        _model_yesterday_pnl, _model_cumulative_pnl, _model_days_tracked = None, None, None
-        _net_pnl, _roi, _record, _win_rate, _streak = 0.0, 0.0, "—", "—", None
+        # Hit rate stats from model_pnl_report (win/loss data per day, no $ amounts used)
+        _model_yesterday_record, _model_days_tracked = None, None
+        _record, _win_rate, _streak = "—", "—", None
         try:
             _pnl_js = _js.loads(model_pnl_report())
             _pnl_summary = _pnl_js.get("model_pnl_summary", {})
             _pnl_daily   = _pnl_js.get("daily", [])
             if _pnl_summary.get("days_tracked", 0) > 0:
-                _cum_str = _pnl_summary.get("cumulative_pnl", "$0.00")
-                _model_cumulative_pnl = float(_cum_str.replace("$", "").replace("+", ""))
                 _model_days_tracked = _pnl_summary.get("days_tracked")
-                _roi = float(_pnl_summary.get("roi", "0%").replace("%", "").replace("+", ""))
                 _win_rate = _pnl_summary.get("win_pct", "—")
+                _total_picks = _pnl_summary.get("total_picks_with_odds", 0)
+                _total_wins  = sum(d.get("wins", 0) for d in _pnl_daily)
+                _record = f"{_total_wins} / {_total_picks}"
             if _pnl_daily:
                 _last_day = _pnl_daily[-1]
-                _day_str  = _last_day.get("day_pnl", "$0.00")
-                _model_yesterday_pnl = float(_day_str.replace("$", "").replace("+", ""))
-                # Streak: consecutive profitable or losing days (most recent first)
-                _streak_days = [float(d["day_pnl"].replace("$","").replace("+","")) for d in reversed(_pnl_daily)]
-                _streak_type = "W" if _streak_days[0] > 0 else "L"
-                _streak_count = sum(1 for d in _streak_days if (d > 0) == (_streak_days[0] > 0) and (d > 0 or True))
-                # stop counting when streak breaks
+                _model_yesterday_record = (_last_day.get("wins", 0), _last_day.get("picks_with_odds", 0))
+                # Streak: consecutive days at ≥20% hit rate or <20%
+                _streak_rates = [
+                    (d.get("wins", 0) / d.get("picks_with_odds", 1) >= 0.20)
+                    for d in reversed(_pnl_daily)
+                ]
+                _streak_type = "W" if _streak_rates[0] else "L"
                 _streak_count = 0
-                for _d in _streak_days:
-                    if (_d > 0) == (_streak_days[0] > 0):
+                for _sr in _streak_rates:
+                    if _sr == _streak_rates[0]:
                         _streak_count += 1
                     else:
                         break
                 _streak = f"{_streak_count}{_streak_type}"
         except Exception as _pnl_err:
-            print(f"  [HTML] P&L load failed: {_pnl_err}")
+            print(f"  [HTML] Hit rate load failed: {_pnl_err}")
 
         import datetime as _dt2
         _timestamp = _dt2.datetime.now().strftime("%Y-%m-%d %I:%M %p")
 
-        # Compute hit rates + P&L for EV group and star buckets
+        # Compute hit rates for EV group and star buckets
         _ranked_for_html = _all_ranked or picks
         _group_data = {
-            "best_bets": {"hit_rate": group_hit_rate(True), "pnl": group_pnl(True)},
+            "best_bets": {"hit_rate": group_hit_rate(True)},
         }
         _tier_hit_rates = {sc: star_bucket_hit_rate(sc) for sc in range(5, -1, -1)}
-        _tier_pnl       = {sc: star_bucket_pnl(sc)      for sc in range(5, -1, -1)}
 
         import time as _time
         _version = str(int(_time.time()))
@@ -653,16 +650,12 @@ try:
             auc=_auc,
             ml_influence=_ml_influence,
             win_rate=_win_rate,
-            net_pnl=_net_pnl,
-            roi=_roi,
             record=_record,
-            model_yesterday_pnl=_model_yesterday_pnl,
-            model_cumulative_pnl=_model_cumulative_pnl,
+            model_yesterday_record=_model_yesterday_record,
             model_days_tracked=_model_days_tracked,
             streak=_streak,
             group_data=_group_data,
             tier_hit_rates=_tier_hit_rates,
-            tier_pnl=_tier_pnl,
             version=_version,
             best_bets=_best_bets,
         )

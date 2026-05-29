@@ -361,16 +361,12 @@ def generate_picks_html(
     auc: float = 0.0,
     ml_influence: float = 0.0,
     win_rate: str = "—",
-    net_pnl: float = 0.0,
-    roi: float = 0.0,
     record: str = "—",
-    model_yesterday_pnl: float | None = None,
-    model_cumulative_pnl: float | None = None,
+    model_yesterday_record: tuple | None = None,
     model_days_tracked: int | None = None,
     streak: str | None = None,
     group_data: dict | None = None,
     tier_hit_rates: dict | None = None,
-    tier_pnl: dict | None = None,
     version: str = "",
     best_bets: list[dict] | None = None,
 ) -> str:
@@ -378,10 +374,8 @@ def generate_picks_html(
 
     def _tier_header_html(label: str, subtitle: str, n: int, star_n: int | None) -> str:
         hit_rate_html = ""
-        pnl_html = ""
-        if star_n is not None and tier_hit_rates and tier_pnl:
+        if star_n is not None and tier_hit_rates:
             n_picks, n_homers = tier_hit_rates.get(star_n, (0, 0))
-            pv = tier_pnl.get(star_n)
             if n_picks > 0:
                 rate = n_homers / n_picks * 100
                 hit_rate_html = (
@@ -390,26 +384,21 @@ def generate_picks_html(
                     f'<span class="tier-hit-count"> ({n_picks} picks)</span>'
                     f'</span>'
                 )
-            if pv is not None:
-                pnl_css = "tier-pnl-pos" if pv > 0 else "tier-pnl-neg" if pv < 0 else "tier-pnl-flat"
-                pnl_html = f'<span class="tier-pnl {pnl_css}">${pv:+.2f}</span>'
         return (
             f'<div class="tier-header">'
             f'<span class="tier-label">{_esc(label)}</span>'
             f'<span class="tier-subtitle">{_esc(subtitle)}</span>'
             f'<span class="tier-count">{n} pick{"s" if n != 1 else ""}</span>'
-            f'{hit_rate_html}{pnl_html}'
+            f'{hit_rate_html}'
             f'<div class="tier-rule"></div>'
             f'</div>'
         )
 
     # ── EV Plays compact grid ─────────────────────────────────────────────────
     gd_bb = (group_data or {}).get("best_bets")
-    ev_pnl_html = ""
     ev_hit_html = ""
     if gd_bb:
         n_picks, n_homers = gd_bb.get("hit_rate", (0, 0))
-        pv = gd_bb.get("pnl")
         if n_picks > 0:
             rate = n_homers / n_picks * 100
             ev_hit_html = (
@@ -418,9 +407,6 @@ def generate_picks_html(
                 f'<span class="tier-hit-count"> ({n_picks} picks)</span>'
                 f'</span>'
             )
-        if pv is not None:
-            pnl_css = "tier-pnl-pos" if pv > 0 else "tier-pnl-neg" if pv < 0 else "tier-pnl-flat"
-            ev_pnl_html = f'<span class="tier-pnl {pnl_css}">${pv:+.2f}</span>'
 
     ev_cards_html = ""
     for i, p in enumerate(best_bets or [], 1):
@@ -443,7 +429,7 @@ def generate_picks_html(
   <div class="ev-section-header">
     <span class="ev-section-title">Top EV Plays</span>
     <span class="ev-section-sub">Top 5 by expected value</span>
-    {ev_hit_html}{ev_pnl_html}
+    {ev_hit_html}
     <div class="ev-section-rule"></div>
   </div>
   <div class="ev-grid">
@@ -486,26 +472,16 @@ def generate_picks_html(
     auc_str = f"{auc:.3f}" if auc else "—"
     ml_str  = f"{ml_influence * 100:.0f}%" if ml_influence else "—"
 
-    def _pnl_chip(label: str, value: float | None, since: str = "") -> str:
-        if value is None:
-            return ""
-        fmt = f"${value:+.2f}"
-        css = "chip-pnl-pos" if value > 0 else "chip-pnl-neg" if value < 0 else "chip-auc"
-        since_html = f' <span class="chip-since">since {_esc(since)}</span>' if since else ""
-        return f'<div class="chip {css}">{_esc(label)} {_esc(fmt)}{since_html}</div>'
+    # Model stats tile (hit rate hero + sub-stats including streak)
+    if win_rate and win_rate != "—":
+        days_fmt = f"{model_days_tracked}" if model_days_tracked else "—"
 
-    yesterday_chip = ""  # moved into stats tile next to Cumulative P&L
-
-    # Model stats tile (ROI hero + 5 sub-stats including streak)
-    if roi and model_cumulative_pnl is not None:
-        roi_sign = "+" if roi >= 0 else ""
-        roi_css  = "color:#4ADE80" if roi >= 0 else "color:#F87171"
-        cum_color  = "#4ADE80" if model_cumulative_pnl >= 0 else "#F87171"
-        pnl_fmt    = f"${model_cumulative_pnl:+.2f}" if model_cumulative_pnl is not None else "—"
-        yest_fmt   = f"${model_yesterday_pnl:+.2f}" if model_yesterday_pnl is not None else None
-        yest_color = "#4ADE80" if (model_yesterday_pnl or 0) >= 0 else "#F87171"
-        yest_html  = f' <span style="color:{yest_color};font-size:0.75rem;opacity:0.8">({_esc(yest_fmt)} yesterday)</span>' if yest_fmt else ""
-        days_fmt   = f"{model_days_tracked}" if model_days_tracked else "—"
+        if model_yesterday_record:
+            yest_wins, yest_picks = model_yesterday_record
+            yest_pct = f"{yest_wins / yest_picks * 100:.0f}%" if yest_picks else "—"
+            yest_html = f'{yest_wins}/{yest_picks} ({yest_pct})'
+        else:
+            yest_html = "—"
 
         if streak:
             is_win = streak.endswith("W")
@@ -515,26 +491,26 @@ def generate_picks_html(
             streak_item = f"""<div class="stats-tile-item">
       <div class="sti-label">Current Streak</div>
       <div class="sti-value" style="color:{streak_color}">{_esc(streak_count)} {streak_type_label}</div>
-      <div class="sti-sub">consecutive days</div>
+      <div class="sti-sub">consecutive days ≥20%</div>
     </div>"""
         else:
             streak_item = ""
 
         model_stats_tile = f"""<div class="model-stats-tile">
   <div class="stats-tile-roi">
-    <div class="roi-value" style="{roi_css}">{roi_sign}{roi:.1f}%</div>
-    <div class="roi-label">Model ROI</div>
+    <div class="roi-value">{_esc(win_rate)}</div>
+    <div class="roi-label">Hit Rate</div>
   </div>
   <div class="stats-tile-items">
     <div class="stats-tile-item">
-      <div class="sti-label">Cumulative P&amp;L</div>
-      <div class="sti-value" style="color:{cum_color}">{_esc(pnl_fmt)}{yest_html}</div>
-      <div class="sti-sub">since Apr 16 · 1 unit = $10/pick</div>
+      <div class="sti-label">Season Record</div>
+      <div class="sti-value">{_esc(record)}</div>
+      <div class="sti-sub">picks homered since Apr 16</div>
     </div>
     <div class="stats-tile-item">
-      <div class="sti-label">HR Hit Rate</div>
-      <div class="sti-value">{_esc(win_rate)}</div>
-      <div class="sti-sub">of top-15 picks</div>
+      <div class="sti-label">Yesterday</div>
+      <div class="sti-value">{_esc(yest_html)}</div>
+      <div class="sti-sub">homers / picks (rate)</div>
     </div>
     <div class="stats-tile-item">
       <div class="sti-label">Model AUC</div>
@@ -721,10 +697,7 @@ def generate_picks_html(
     white-space: nowrap;
   }}
   .chip.chip-auc {{ color: #FBBF24; border-color: rgba(251,191,36,0.4); }}
-  .chip.chip-pnl-pos {{ color: #4ADE80; border-color: rgba(74,222,128,0.4); }}
-  .chip.chip-pnl-neg {{ color: #F87171; border-color: rgba(248,113,113,0.4); }}
   .chip-since {{ font-size: 9px; opacity: 0.55; font-weight: 400; }}
-  .pnl-note {{ font-size: 0.65rem; color: rgba(255,255,255,0.35); align-self: center; }}
 
   /* ─── Model stats tile ─── */
   .model-stats-tile {{
@@ -910,19 +883,6 @@ def generate_picks_html(
     border-color: var(--border);
     font-weight: 400;
   }}
-
-  .tier-pnl {{
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    font-weight: 700;
-    border-radius: 3px;
-    padding: 2px 8px;
-    white-space: nowrap;
-    border: 1px solid;
-  }}
-  .tier-pnl-pos {{ color: #4ADE80; background: rgba(74,222,128,0.08); border-color: rgba(74,222,128,0.4); }}
-  .tier-pnl-neg {{ color: #F87171; background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.4); }}
-  .tier-pnl-flat {{ color: var(--text-dim); background: var(--surface2); border-color: var(--border); }}
 
   .tier-rule {{
     flex: 1;
