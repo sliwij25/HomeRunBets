@@ -1268,7 +1268,6 @@ def generate_picks_html(
     <div class="site-date">Latest Update: {_esc(today)} &nbsp;·&nbsp; {len(picks)} Picks</div>
   </div>
   <div class="model-chips">
-    {yesterday_chip}
     <a class="nav-link" href="pick-of-the-day.html">Pick of Day ★</a>
     <a class="nav-link" href="leaderboard.html">HR Leaders →</a>
   </div>
