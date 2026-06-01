@@ -30,3 +30,10 @@ __pycache__/
 # Hookify rules — local/personal, not shared
 .claude/*.local.md
 .worktrees/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
